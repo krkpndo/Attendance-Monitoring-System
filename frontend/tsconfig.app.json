@@ -1,0 +1,37 @@
+// tsconfig.app.json — your src/ code (browser)
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    // compile to ES2023, and assume browser APIs (DOM) exist. This is why your app code knows about document
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "types": ["vite/client"], // Vite-specific globals like import.meta.env
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    // "trust the bundler (Vite) to resolve imports," which enables modern import behavior.
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    // forces you to write import type { X } for type-only imports. Affects how you write imports day-to-day.
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    // TypeScript does not output JS files. It only type-checks. Vite does the actual building
+    "noEmit": true,
+    // this is the React-relevant one. It lets you write JSX without import React from 'react' at the top of every file. The compiler auto-injects the runtime.
+    "jsx": "react-jsx",
+
+    /* Linting */
+    // turned off here, because ESLint already handles unused vars (with your nicer _ convention)
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    // lets you import with @/components/Button instead of ../../../components/Button
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

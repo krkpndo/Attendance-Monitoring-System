@@ -1,0 +1,380 @@
+
+// Attendance System - Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ENUMS
+
+enum UserType {
+  STUDENT
+  PROFESSOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum RfidStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Semester {
+  FIRST
+  SECOND
+  THIRD
+  SUMMER
+}
+
+enum ClassStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum EnrollmentStatus {
+  ENROLLED
+  DROPPED
+}
+
+enum AttendanceSessionStatus {
+  SCHEDULED
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+enum ExcuseType {
+  MEDICAL
+  EMERGENCY
+  SCHOOL_BUSINESS
+  PERSONAL
+  OTHERS
+}
+
+enum ExcuseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AuditAction {
+  MANUAL_ATTENDANCE
+  ATTENDANCE_OVERRIDE
+  EXCUSE_APPROVED
+  EXCUSE_REJECTED
+  SESSION_OPENED
+  SESSION_CLOSED
+  SESSION_CANCELLED
+  ENROLLMENT_DROPPED
+  RFID_DEACTIVATED
+  USER_STATUS_CHANGED
+}
+
+enum NotificationType {
+  ABSENCE_ALERT
+  EXCUSE_SUBMITTED
+  EXCUSE_APPROVED
+  EXCUSE_REJECTED
+  SESSION_OPENED
+  SESSION_CANCELLED
+  ENROLLMENT_DROPPED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  RFID_VERIFIED
+}
+
+// MODELS
+
+model User {
+  id           String        @id @default(uuid())
+  username     String     @unique
+  password     String
+  email        String     @unique
+  name         String
+  type         UserType
+  status       UserStatus @default(ACTIVE)
+  profileImage String?    @map("profile_image")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  // Profile relations
+  student   Student?
+  professor Professor?
+
+  // Class relations
+  professorClasses    Class[]             @relation("ProfessorClasses")
+  classEnrollments    ClassEnrollment[]
+  attendanceRecords   AttendanceRecord[]  @relation("StudentAttendance")
+  excuseLetters       ExcuseLetter[]      @relation("StudentExcuse")
+
+  // Action relations
+  cancelledSessions   AttendanceSession[] @relation("CancelledByUser")
+  recordedAttendances AttendanceRecord[]  @relation("RecordedByUser")
+  approvedExcuses     ExcuseLetter[]      @relation("ApprovedByUser")
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+
+  @@map("users")
+}
+
+model Student {
+  id                  String             @id @default(uuid())
+  userId              String             @unique @map("user_id")
+  studentNumber       String             @unique @map("student_number")
+  rfidNumber          String?            @unique @map("rfid_number")
+  registeredAt        DateTime           @default(now()) @map("registered_at")
+  rfidStatus          RfidStatus         @default(INACTIVE) @map("rfid_status")
+  rfidDeactivatedAt   DateTime?          @map("rfid_deactivated_at")
+  yearLevel           Int                @map("year_level")
+  program             String
+  section             String
+  department          String?
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  verificationStatus  VerificationStatus @default(UNVERIFIED) @map("verification_status")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("students")
+}
+
+model Professor {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  employeeNumber String   @unique @map("employee_number")
+  department     String
+  position       String
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("professors")
+}
+
+model Course {
+  id               String      @id @default(uuid())
+  courseCode        String   @unique @map("course_code")
+  courseName        String   @map("course_name")
+  courseDescription String?  @map("course_description")
+  units             Int
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  classes Class[]
+
+  @@map("courses")
+}
+
+model Class {
+  id           String      @id @default(uuid())
+  courseId     String      @map("course_id")
+  professorId  String      @map("professor_id")
+  section      String
+  schoolYear   String      @map("school_year")
+  semester     Semester
+  room         String?
+  status       ClassStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  course             Course              @relation(fields: [courseId], references: [id])
+  professor User @relation("ProfessorClasses", fields: [professorId], references: [id])
+  classSchedules     ClassSchedule[]
+  classEnrollments   ClassEnrollment[]
+  attendanceSessions AttendanceSession[]
+
+  @@unique([courseId, section, schoolYear, semester])
+  @@map("classes")
+}
+
+model ClassSchedule {
+  id        String      @id @default(uuid())
+  classId   String      @map("class_id")
+  dayOfWeek Int[]    @map("day_of_week")
+  startTime DateTime @map("start_time") @db.Time()
+  endTime   DateTime @map("end_time") @db.Time()
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  class              Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  attendanceSessions AttendanceSession[]
+
+  @@map("class_schedules")
+}
+
+model ClassEnrollment {
+  id             String           @id @default(uuid())
+  classId        String           @map("class_id")
+  studentId      String           @map("student_id")
+  enrollmentDate DateTime         @default(now()) @map("enrollment_date")
+  status         EnrollmentStatus @default(ENROLLED)
+  droppedDate    DateTime?        @map("dropped_date")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  class   Class @relation(fields: [classId], references: [id])
+  student User  @relation(fields: [studentId], references: [id])
+
+  @@unique([classId, studentId])
+  @@map("class_enrollments")
+}
+
+model AttendanceSession {
+  id          String                     @id @default(uuid())
+  classId     String                     @map("class_id")
+  scheduleId  String                     @map("schedule_id")
+  sessionDate DateTime                @map("session_date") @db.Date
+  startTime   DateTime                @map("start_time") @db.Time()
+  endTime     DateTime                @map("end_time") @db.Time()
+  status      AttendanceSessionStatus @default(SCHEDULED)
+  openedAt    DateTime?               @map("opened_at")
+  closedAt    DateTime?               @map("closed_at")
+  cancelledBy String?                    @map("cancelled_by")
+  cancelledAt DateTime?               @map("cancelled_at")
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  // Relations
+  class             Class              @relation(fields: [classId], references: [id])
+  schedule          ClassSchedule      @relation(fields: [scheduleId], references: [id])
+  cancelledByUser   User?              @relation("CancelledByUser", fields: [cancelledBy], references: [id])
+  attendanceRecords AttendanceRecord[]
+
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id         String           @id @default(uuid())
+  sessionId  String           @map("session_id")
+  studentId  String           @map("student_id")
+  timeIn     DateTime?        @map("time_in")
+  status     AttendanceStatus @default(ABSENT)
+  isManual   Boolean          @default(false) @map("is_manual")
+  recordedBy String?          @map("recorded_by")
+  remarks    String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  session        AttendanceSession @relation(fields: [sessionId], references: [id])
+  student        User              @relation("StudentAttendance", fields: [studentId], references: [id])
+  recordedByUser User?             @relation("RecordedByUser", fields: [recordedBy], references: [id])
+  excuseDates    ExcuseDate[]
+
+  @@unique([sessionId, studentId])
+  @@map("attendance_records")
+}
+
+model ExcuseLetter {
+  id              String       @id @default(uuid())
+  studentId       String       @map("student_id")
+  excuseType      ExcuseType   @map("excuse_type")
+  description     String
+  submittedAt     DateTime     @default(now()) @map("submitted_at")
+  status          ExcuseStatus @default(PENDING)
+  approvedBy      String?      @map("approved_by")
+  approvalDate    DateTime?    @map("approval_date")
+  rejectionReason String?      @map("rejection_reason")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  student        User              @relation("StudentExcuse", fields: [studentId], references: [id])
+  approvedByUser User?             @relation("ApprovedByUser", fields: [approvedBy], references: [id])
+  excuseDates    ExcuseDate[]
+  attachments    ExcuseAttachment[]
+
+  @@map("excuse_letters")
+}
+
+model ExcuseDate {
+  id           String @id @default(uuid())
+  excuseId     String @map("excuse_id")
+  attendanceId String @map("attendance_id")
+
+  // Relations
+  excuseLetter     ExcuseLetter     @relation(fields: [excuseId], references: [id], onDelete: Cascade)
+  attendanceRecord AttendanceRecord @relation(fields: [attendanceId], references: [id])
+
+  @@unique([excuseId, attendanceId])
+  @@map("excuse_dates")
+}
+
+model ExcuseAttachment {
+  id         String      @id @default(uuid())
+  excuseId   String      @map("excuse_id")
+  fileName   String   @map("file_name")
+  fileType   String   @map("file_type")
+  fileSize   Int      @map("file_size")
+  filePath   String   @map("file_path")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  // Relations
+  excuseLetter ExcuseLetter @relation(fields: [excuseId], references: [id], onDelete: Cascade)
+
+  @@map("excuse_attachments")
+}
+
+model AuditLog {
+  id          String         @id @default(uuid())
+  userId      String         @map("user_id")
+  action      AuditAction
+  entityType  String      @map("entity_type")
+  entityId    Int         @map("entity_id")
+  description String?
+  oldValue    Json?       @map("old_value")
+  newValue    Json?       @map("new_value")
+  ipAddress   String?     @map("ip_address")
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String              @map("user_id")
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at")
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}

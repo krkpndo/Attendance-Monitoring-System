@@ -1,0 +1,28 @@
+{
+    "permissions": {
+      "allow": [
+        "Bash(npm:*)",
+        "Bash(npx:*)",
+        "Bash(pnpm:*)",
+        "Bash(git status)",
+        "Bash(git diff:*)",
+        "Bash(git log:*)",
+        "Bash(git branch:*)",
+        "Bash(git add:*)",
+        "Bash(git checkout:*)",
+        "Bash(tsc:*)",
+        "Bash(ls:*)",
+        "Bash(cat:*)",
+        "Bash(grep:*)",
+        "Bash(rg:*)",
+        "Bash(find:*)"
+      ],
+      "deny": [
+        "Bash(git push:*)",
+        "Bash(git reset --hard:*)",
+        "Bash(rm:*)",
+        "Bash(prisma migrate:*)",
+        "Bash(npx prisma migrate:*)"
+      ]
+    }
+  }

@@ -1,0 +1,56 @@
+{
+  // add a "include" and "exclude" at the top level (outside compilerOptions):
+  // This tells the compiler to only look at your src folder and ignore everything else
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "ts-node": {
+    "files": true
+  },
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+
+    // Uncomment and set these — you need them so the compiler knows where your source lives and where to output the compiled JS:
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    // See also https://aka.ms/tsconfig/module
+    "module": "nodenext",
+    "target": "esnext",
+    // For nodejs:
+
+    // Uncomment the Node types — without this, TypeScript won't recognize Node APIs like process.env, Buffer, console, etc.:
+    "lib": ["esnext"],
+    "types": ["node"],
+    // and npm install -D @types/node
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+
+    // Style Options
+    // "noImplicitReturns": true,
+    // "noImplicitOverride": true,
+    // "noUnusedLocals": true,
+    // "noUnusedParameters": true,
+    // "noFallthroughCasesInSwitch": true,
+    // "noPropertyAccessFromIndexSignature": true,
+
+    // Recommended Options
+    "strict": true, 
+    // verbatimModuleSyntax — this can cause issues with packages like express and dotenv that use CommonJS exports. If you start getting import errors like "this expression is not callable" or issues with default imports, flip this to false.
+    "verbatimModuleSyntax": false,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+
+    "typeRoots": ["./node_modules/@types", "./src/types"]
+  }
+}
