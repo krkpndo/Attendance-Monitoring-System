@@ -1,21 +1,15 @@
 import { NextFunction, Request, Response } from 'express';
 import AuthService from '../services/auth.service';
 import { generateTokenPair, verifyAccessToken, verifyRefreshToken } from '../utils/token_utils';
-import { AppError } from '../utils/app-error';
 
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        
+        const meta = { userAgent: req.headers['user-agent'], ipAddress: req.ip };
         const { identifier, password } = req.body;
 
-        if (!identifier || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Identification number and password are requried'
-            });
-        }
-
-        const result = await AuthService.login({ identifier, password });
+        const result = await AuthService.login({ identifier, password }, meta);
 
         return res.status(200).json({
             success: true,
@@ -38,22 +32,28 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
             });
         }
 
-        const payload = verifyRefreshToken(refreshToken);
+        const tokens = await AuthService.refreshSession(refreshToken);
 
-        if (payload.type !== 'refresh') {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid token type'
-            });
-        }
-
-        const tokens = generateTokenPair(payload.userId, payload.role);
-        
         return res.status(200).json({
             success: true,
             message: 'Tokens refreshed successfully',
             data: tokens
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const logout = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        
+        await AuthService.logout(req.user!.userId);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Logged out successfully'
+        });
+
     } catch (error) {
         next(error);
     }
@@ -74,7 +74,32 @@ export const me = async (req: Request, res: Response, next: NextFunction) => {
     }
 }
 
-// Change Password
-export const changePassword = async (req: Request, res: Response) => {
-    // Will be implementing soon
+export const forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+
+        await AuthService.forgotPassword(req.body.email);
+
+        return res.status(200).json({
+            success: true,
+            message: 'A reset link has been sent. Please, check your email.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+
+        await AuthService.resetPassword(req.body.token, req.body.newPassword);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset successfully. Please, log in.'
+        });
+
+    } catch (error) {
+        next(error);
+    }
 };
