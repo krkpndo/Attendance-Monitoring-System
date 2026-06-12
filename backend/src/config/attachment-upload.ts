@@ -1,7 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { AppError } from '../utils/app-error';
+import { AppError } from '../utils/app_error';
 
 // Ensure upload directory exists
 // Creates the uploads/excuses/ folder if it doesn't exist. process.cwd() is the root of your project. recursive: true creates parent folders too.

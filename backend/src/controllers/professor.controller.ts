@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import ProfessorService from '../services/professor.service';
 import NotificationService from '../services/notification.service';
-import { AppError } from '../utils/app-error';
+import { AppError } from '../utils/app_error';
 import { MarkAttendanceDto, ReviewExcuseLetterDto, UpdateProfileDto } from '../interfaces/professor.interface';
 import { stat } from 'node:fs';
 

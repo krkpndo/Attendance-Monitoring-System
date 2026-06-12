@@ -103,20 +103,24 @@ enum VerificationStatus {
 // MODELS
 
 model User {
-  id           String        @id @default(uuid())
-  username     String     @unique
-  password     String
-  email        String     @unique
-  name         String
-  type         UserType
-  status       UserStatus @default(ACTIVE)
-  profileImage String?    @map("profile_image")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id              String            @id @default(uuid())
+  username        String            @unique
+  password        String
+  email           String            @unique
+  name            String
+  type            UserType
+  status          UserStatus        @default(ACTIVE)
+  profileImage    String?           @map("profile_image")
+  lastLoginAt     DateTime?         @map("last_login_at")
+  lastLoginIp     String?           @map("last_login_ip")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
 
   // Profile relations
-  student   Student?
-  professor Professor?
+  student         Student?
+  professor       Professor?
+  session         Session?
+  passwordResets  PasswordReset[]
 
   // Class relations
   professorClasses    Class[]             @relation("ProfessorClasses")
@@ -172,7 +176,7 @@ model Professor {
 }
 
 model Course {
-  id               String      @id @default(uuid())
+  id                String   @id @default(uuid())
   courseCode        String   @unique @map("course_code")
   courseName        String   @map("course_name")
   courseDescription String?  @map("course_description")
@@ -200,7 +204,7 @@ model Class {
 
   // Relations
   course             Course              @relation(fields: [courseId], references: [id])
-  professor User @relation("ProfessorClasses", fields: [professorId], references: [id])
+  professor          User                @relation("ProfessorClasses", fields: [professorId], references: [id])
   classSchedules     ClassSchedule[]
   classEnrollments   ClassEnrollment[]
   attendanceSessions AttendanceSession[]
@@ -210,8 +214,8 @@ model Class {
 }
 
 model ClassSchedule {
-  id        String      @id @default(uuid())
-  classId   String      @map("class_id")
+  id        String   @id @default(uuid())
+  classId   String   @map("class_id")
   dayOfWeek Int[]    @map("day_of_week")
   startTime DateTime @map("start_time") @db.Time()
   endTime   DateTime @map("end_time") @db.Time()
@@ -244,16 +248,16 @@ model ClassEnrollment {
 }
 
 model AttendanceSession {
-  id          String                     @id @default(uuid())
-  classId     String                     @map("class_id")
-  scheduleId  String                     @map("schedule_id")
+  id          String                  @id @default(uuid())
+  classId     String                  @map("class_id")
+  scheduleId  String                  @map("schedule_id")
   sessionDate DateTime                @map("session_date") @db.Date
   startTime   DateTime                @map("start_time") @db.Time()
   endTime     DateTime                @map("end_time") @db.Time()
   status      AttendanceSessionStatus @default(SCHEDULED)
   openedAt    DateTime?               @map("opened_at")
   closedAt    DateTime?               @map("closed_at")
-  cancelledBy String?                    @map("cancelled_by")
+  cancelledBy String?                 @map("cancelled_by")
   cancelledAt DateTime?               @map("cancelled_at")
   createdAt   DateTime                @default(now()) @map("created_at")
   updatedAt   DateTime                @updatedAt @map("updated_at")
@@ -325,8 +329,8 @@ model ExcuseDate {
 }
 
 model ExcuseAttachment {
-  id         String      @id @default(uuid())
-  excuseId   String      @map("excuse_id")
+  id         String   @id @default(uuid())
+  excuseId   String   @map("excuse_id")
   fileName   String   @map("file_name")
   fileType   String   @map("file_type")
   fileSize   Int      @map("file_size")
@@ -340,8 +344,8 @@ model ExcuseAttachment {
 }
 
 model AuditLog {
-  id          String         @id @default(uuid())
-  userId      String         @map("user_id")
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
   action      AuditAction
   entityType  String      @map("entity_type")
   entityId    Int         @map("entity_id")
@@ -361,8 +365,8 @@ model AuditLog {
 }
 
 model Notification {
-  id        String              @id @default(uuid())
-  userId    String              @map("user_id")
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
   type      NotificationType
   title     String
   message   String
@@ -377,4 +381,32 @@ model Notification {
   @@index([userId, isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    String    @unique @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model PasswordReset {
+  id         String     @id @default(uuid())
+  userId     String     @map("user_id")
+  tokenHash  String     @unique @map("token_hash")
+  expiresAt  DateTime   @map("expires_at")
+  usedAt     DateTime?  @map("used_at")
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
 }
