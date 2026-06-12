@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import StudentService from "../services/student.service";
-import { AppError } from "../utils/app-error";
+import { AppError } from "../utils/app_error";
 import NotificationService from "../services/notification.service";
 import multer from "multer";
 import { UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";

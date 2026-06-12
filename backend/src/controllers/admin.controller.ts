@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import AdminService from '../services/admin.service';
 import NotificationService from '../services/notification.service';
-import { AppError } from '../utils/app-error';
+import { AppError } from '../utils/app_error';
 
 // User Management
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {

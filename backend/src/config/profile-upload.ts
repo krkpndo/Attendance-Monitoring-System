@@ -1,7 +1,7 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { AppError } from '../utils/app-error';
+import { AppError } from '../utils/app_error';
 
 const uploadDir = path.join(process.cwd(), 'uploads', 'profiles');
 if (!fs.existsSync(uploadDir)) {

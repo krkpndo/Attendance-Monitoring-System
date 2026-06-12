@@ -1,5 +1,5 @@
 import prisma from "../config/prisma";
-import { AppError } from "../utils/app-error";
+import { AppError } from "../utils/app_error";
 import path from 'path';
 import fs from 'fs';
 import { MarkAttendanceDto, ReviewExcuseLetterDto, UpdateProfileDto } from "../interfaces/professor.interface";

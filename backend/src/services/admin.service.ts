@@ -1,6 +1,6 @@
 import prisma from '../config/prisma';
 import argon2 from 'argon2';
-import { AppError } from '../utils/app-error';
+import { AppError } from '../utils/app_error';
 import { CreateClassDto, CreateCourseDto, CreateUserDto, GetAttendanceRecordsDto, GetClassesFilter, SetClassSchedultDto, StudentSearchFilter, UpdateClassDto, UpdateCourseDto, UpdateProfessorProfileDto, UpdateStudentProfileDto, UpdateUserProfileDto } from '../interfaces/admin.interface';
 import { Prisma } from '@prisma/client';
 

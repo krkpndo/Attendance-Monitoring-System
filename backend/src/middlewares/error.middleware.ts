@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { AppError } from "../utils/app-error";
+import { AppError } from "../utils/app_error";
 import multer from "multer";
 
 export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
