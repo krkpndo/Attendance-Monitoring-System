@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { createClassSchema, createCourseSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, reviewExcuseLetterSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
+import { createClassSchema, createCourseSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, rejectRfidRequestSchema, reviewExcuseLetterSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
 
 const router = Router();
 
@@ -19,7 +19,7 @@ router.patch('/users/professors/:userId', AdminController.updateProfessor);
 
 // Student Management
 router.get('/students', validate(getStudentsQuerySchema), AdminController.getStudents);
-router.patch('/students/:userId/rfid/deactivate', AdminController.deactivateRfid);
+router.patch('/students/:userId/rfid/revoke', AdminController.revokeRfid);
 
 // Untested
 // router.post('/students/:studentId/rfid', AdminController.assignRfid);
@@ -60,5 +60,10 @@ router.get('/audit-logs', AdminController.getAuditLogs);
 // Notifications
 router.get('/notifications', AdminController.getNotifications);
 router.patch('/notifications/:notificationId/read', AdminController.markNotificationAsRead);
+
+// RFID
+router.patch('/students/:userId/revoke', AdminController.revokeRfid);
+router.get('/rfid/requests', validate(getRfidRequestsQuerySchema), AdminController.getRfidRequests);
+router.patch('/rfid/requests/:requestId/reject', validate(rejectRfidRequestSchema), AdminController.rejectRfidRequest);
 
 export default router;

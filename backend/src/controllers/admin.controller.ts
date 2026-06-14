@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import AdminService from '../services/admin.service';
 import NotificationService from '../services/notification.service';
 import { AppError } from '../utils/app_error';
+import { ClassStatus, RfidRequestStatus, Semester, VerificationStatus } from '@prisma/client';
 
 // User Management
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -84,10 +85,10 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 export const updateStudent = async (req: Request, res: Response, next: NextFunction) => {
   try {
       const userId  = req.params.userId as string;
-      const { studentNumber, rfidStatus, yearLevel, program, section, department } = req.body;
+      const { studentNumber, yearLevel, program, section, department } = req.body;
 
       const result = await AdminService.updateStudent(userId, { 
-          studentNumber, rfidStatus, yearLevel, program, section, department 
+          studentNumber, yearLevel, program, section, department 
       });
 
       return res.status(200).json({
@@ -145,7 +146,7 @@ export const getStudents = async (req: Request, res: Response, next: NextFunctio
       program: program as string | undefined,
       yearLevel: yearLevel ? parseInt(yearLevel as string) : undefined,
       section: section as string | undefined,
-      verificationStatus: verificationStatus as string | undefined,
+      verificationStatus: verificationStatus as VerificationStatus | undefined,
     });
 
     return res.status(200).json({
@@ -158,39 +159,15 @@ export const getStudents = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-// export const assignRfid = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const studentId = req.params.studentId as string;
-//     const { rfidNumber } = req.body;
-
-//     if (!rfidNumber) {
-//       return res.status(400).json({
-//         success: false,
-//         message: 'RFID number is required'
-//       });
-//     }
-
-//     const result = await AdminService.assignRfid(studentId, rfidNumber);
-
-//     return res.status(200).json({
-//         success: true,
-//         message: 'RFID assigned successfully',
-//         data: result
-//     });
-//   } catch (error) {
-//     next(error);
-//   }
-// };
-
-export const deactivateRfid = async (req: Request, res: Response, next: NextFunction) => {
+export const revokeRfid = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const studentId = req.params.userId as string;
 
-    const result = await AdminService.deactivateRfid(studentId);
+    const result = await AdminService.revokeRfid(studentId);
 
     return res.json({
         success: true,
-        message: 'RFID deactivated successfully',
+        message: 'RFID revoked successfully',
         data: result
     });
   } catch (error) {
@@ -321,8 +298,8 @@ export const getClasses = async (req: Request, res: Response, next: NextFunction
       courseId: courseId as string | undefined,
       professorId: professorId as string | undefined,
       schoolYear: schoolYear as string | undefined,
-      semester: semester as string | undefined,
-      status: status as string | undefined,
+      semester: semester as Semester | undefined,
+      status: status as ClassStatus | undefined,
     });
 
     return res.status(200).json({
@@ -604,4 +581,37 @@ export const markNotificationAsRead = async (req: Request, res: Response, next: 
     }
     res.status(500).json({ success: false, message: 'Internal server error', code: 'SERVER_ERROR' });
   }
+};
+
+export const getRfidRequests = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = req.query.status as RfidRequestStatus | undefined;
+
+    const result = await AdminService.getRfidRequests({ status });
+
+    return res.status(200).json({
+      success: true,
+      message: 'RFID requests retrieved successfully',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectRfidRequest = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const requestId = req.params.requestId as string;
+    const { reason } = req.body;
+
+    const result = await AdminService.rejectRfidRequest(req.user!.userId, requestId, reason);
+
+    return res.status(200).json({
+      success: true,
+      message: 'RFID request rejected',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  } 
 };

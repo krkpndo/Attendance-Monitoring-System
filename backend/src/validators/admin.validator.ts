@@ -1,9 +1,5 @@
 import z from "zod";
 
-// export const idParamSchema = z.object({
-//     classId: z.uuid('Invalid class ID')
-// });
-
 export const idParamSchema = z.object({
     classId: z.string().min(1, 'Class ID is required')
 });
@@ -95,4 +91,14 @@ export const reviewExcuseLetterSchema = z.object({
         message: 'Status must be APPROVED or REJECTED'
     }),
     rejectionReason: z.string().max(500).optional()
+});
+
+export const getRfidRequestsQuerySchema = z.object({
+    status: z.enum(['PENDING', 'FULFILLED', 'REJECTED'], {
+        message: 'Status must be PENDING, FULFILLED, or REJECTED'
+    }).optional()
+});
+
+export const rejectRfidRequestSchema = z.object({
+    reason: z.string().min(1, 'REJECTION reason is required').max(500)
 });

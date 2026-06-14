@@ -196,9 +196,9 @@ async function main() {
             program: s.program,
             section: s.section,
             department: s.department,
-            rfidNumber: s.rfid,
-            rfidStatus: s.verified ? 'ACTIVE' : 'INACTIVE',
-            verificationStatus: s.verified ? 'RFID_VERIFIED' : 'UNVERIFIED',
+            ...(s.rfid && {
+              rfidCards: { create: { rfidNumber: s.rfid, status: 'ACTIVE' } }
+            })
           },
         },
       },
@@ -243,34 +243,34 @@ async function main() {
   // Classes (10)
   // ============================================================
   const class1 = await prisma.class.create({
-    data: { courseId: cs101.id, professorId: prof1.professor!.id, section: 'BSCS-3A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 301' },
+    data: { courseId: cs101.id, professorId: prof1.id, section: 'BSCS-3A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 301' },
   });
   const class2 = await prisma.class.create({
-    data: { courseId: cs201.id, professorId: prof1.professor!.id, section: 'BSCS-3A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 302' },
+    data: { courseId: cs201.id, professorId: prof1.id, section: 'BSCS-3A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 302' },
   });
   const class3 = await prisma.class.create({
-    data: { courseId: cs101.id, professorId: prof3.professor!.id, section: 'BSCS-3B', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 303' },
+    data: { courseId: cs101.id, professorId: prof3.id, section: 'BSCS-3B', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 303' },
   });
   const class4 = await prisma.class.create({
-    data: { courseId: cs301.id, professorId: prof3.professor!.id, section: 'BSCS-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 304' },
+    data: { courseId: cs301.id, professorId: prof3.id, section: 'BSCS-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 304' },
   });
   const class5 = await prisma.class.create({
-    data: { courseId: cs401.id, professorId: prof5.professor!.id, section: 'BSCS-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 305' },
+    data: { courseId: cs401.id, professorId: prof5.id, section: 'BSCS-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Room 305' },
   });
   const class6 = await prisma.class.create({
-    data: { courseId: it101.id, professorId: prof2.professor!.id, section: 'BSIT-2A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 201' },
+    data: { courseId: it101.id, professorId: prof2.id, section: 'BSIT-2A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 201' },
   });
   const class7 = await prisma.class.create({
-    data: { courseId: it201.id, professorId: prof2.professor!.id, section: 'BSIT-2A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 202' },
+    data: { courseId: it201.id, professorId: prof2.id, section: 'BSIT-2A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 202' },
   });
   const class8 = await prisma.class.create({
-    data: { courseId: it101.id, professorId: prof4.professor!.id, section: 'BSIT-2B', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 203' },
+    data: { courseId: it101.id, professorId: prof4.id, section: 'BSIT-2B', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 203' },
   });
   const class9 = await prisma.class.create({
-    data: { courseId: it301.id, professorId: prof4.professor!.id, section: 'BSIT-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 204' },
+    data: { courseId: it301.id, professorId: prof4.id, section: 'BSIT-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 204' },
   });
   const class10 = await prisma.class.create({
-    data: { courseId: it401.id, professorId: prof4.professor!.id, section: 'BSIT-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 205' },
+    data: { courseId: it401.id, professorId: prof4.id, section: 'BSIT-4A', schoolYear: '2025-2026', semester: 'FIRST', room: 'Lab 205' },
   });
 
   console.log('🏫 Created 10 classes');
@@ -309,31 +309,31 @@ async function main() {
 
   const enrollmentData = [
     // BSCS-3A
-    { classId: class1.id, studentId: students[0].student!.id },
-    { classId: class1.id, studentId: students[1].student!.id },
-    { classId: class1.id, studentId: students[2].student!.id },
-    { classId: class2.id, studentId: students[0].student!.id },
-    { classId: class2.id, studentId: students[1].student!.id },
-    { classId: class2.id, studentId: students[2].student!.id },
+    { classId: class1.id, studentId: students[0].id },
+    { classId: class1.id, studentId: students[1].id },
+    { classId: class1.id, studentId: students[2].id },
+    { classId: class2.id, studentId: students[0].id },
+    { classId: class2.id, studentId: students[1].id },
+    { classId: class2.id, studentId: students[2].id },
     // BSCS-3B
-    { classId: class3.id, studentId: students[3].student!.id },
-    { classId: class3.id, studentId: students[4].student!.id },
+    { classId: class3.id, studentId: students[3].id },
+    { classId: class3.id, studentId: students[4].id },
     // BSCS-4A
-    { classId: class4.id, studentId: students[13].student!.id },
-    { classId: class5.id, studentId: students[13].student!.id },
+    { classId: class4.id, studentId: students[13].id },
+    { classId: class5.id, studentId: students[13].id },
     // BSIT-2A
-    { classId: class6.id, studentId: students[5].student!.id },
-    { classId: class6.id, studentId: students[6].student!.id },
-    { classId: class6.id, studentId: students[7].student!.id },
-    { classId: class7.id, studentId: students[5].student!.id },
-    { classId: class7.id, studentId: students[6].student!.id },
-    { classId: class7.id, studentId: students[7].student!.id },
+    { classId: class6.id, studentId: students[5].id },
+    { classId: class6.id, studentId: students[6].id },
+    { classId: class6.id, studentId: students[7].id },
+    { classId: class7.id, studentId: students[5].id },
+    { classId: class7.id, studentId: students[6].id },
+    { classId: class7.id, studentId: students[7].id },
     // BSIT-2B
-    { classId: class8.id, studentId: students[8].student!.id },
-    { classId: class8.id, studentId: students[9].student!.id },
+    { classId: class8.id, studentId: students[8].id },
+    { classId: class8.id, studentId: students[9].id },
     // BSIT-4A
-    { classId: class9.id, studentId: students[14].student!.id },
-    { classId: class10.id, studentId: students[14].student!.id },
+    { classId: class9.id, studentId: students[14].id },
+    { classId: class10.id, studentId: students[14].id },
   ];
 
   await prisma.classEnrollment.createMany({ data: enrollmentData });
@@ -355,9 +355,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: session1.id, studentId: cs101Students[0].student!.id, timeIn: new Date('2026-03-17T08:02:00'), status: 'PRESENT' },
-      { sessionId: session1.id, studentId: cs101Students[1].student!.id, timeIn: new Date('2026-03-17T08:05:00'), status: 'PRESENT' },
-      { sessionId: session1.id, studentId: cs101Students[2].student!.id, timeIn: new Date('2026-03-17T08:01:00'), status: 'PRESENT' },
+      { sessionId: session1.id, studentId: cs101Students[0].id, timeIn: new Date('2026-03-17T08:02:00'), status: 'PRESENT' },
+      { sessionId: session1.id, studentId: cs101Students[1].id, timeIn: new Date('2026-03-17T08:05:00'), status: 'PRESENT' },
+      { sessionId: session1.id, studentId: cs101Students[2].id, timeIn: new Date('2026-03-17T08:01:00'), status: 'PRESENT' },
     ],
   });
 
@@ -371,9 +371,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: session2.id, studentId: cs101Students[0].student!.id, timeIn: new Date('2026-03-19T08:03:00'), status: 'PRESENT' },
-      { sessionId: session2.id, studentId: cs101Students[1].student!.id, timeIn: new Date('2026-03-19T08:25:00'), status: 'LATE' },
-      { sessionId: session2.id, studentId: cs101Students[2].student!.id, timeIn: new Date('2026-03-19T08:04:00'), status: 'PRESENT' },
+      { sessionId: session2.id, studentId: cs101Students[0].id, timeIn: new Date('2026-03-19T08:03:00'), status: 'PRESENT' },
+      { sessionId: session2.id, studentId: cs101Students[1].id, timeIn: new Date('2026-03-19T08:25:00'), status: 'LATE' },
+      { sessionId: session2.id, studentId: cs101Students[2].id, timeIn: new Date('2026-03-19T08:04:00'), status: 'PRESENT' },
     ],
   });
 
@@ -387,9 +387,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: session3.id, studentId: cs101Students[0].student!.id, timeIn: new Date('2026-03-21T08:01:00'), status: 'PRESENT' },
-      { sessionId: session3.id, studentId: cs101Students[1].student!.id, status: 'ABSENT' },
-      { sessionId: session3.id, studentId: cs101Students[2].student!.id, timeIn: new Date('2026-03-21T08:10:00'), status: 'PRESENT' },
+      { sessionId: session3.id, studentId: cs101Students[0].id, timeIn: new Date('2026-03-21T08:01:00'), status: 'PRESENT' },
+      { sessionId: session3.id, studentId: cs101Students[1].id, status: 'ABSENT' },
+      { sessionId: session3.id, studentId: cs101Students[2].id, timeIn: new Date('2026-03-21T08:10:00'), status: 'PRESENT' },
     ],
   });
 
@@ -403,9 +403,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: session4.id, studentId: cs101Students[0].student!.id, timeIn: new Date('2026-03-24T08:20:00'), status: 'LATE' },
-      { sessionId: session4.id, studentId: cs101Students[1].student!.id, status: 'ABSENT' },
-      { sessionId: session4.id, studentId: cs101Students[2].student!.id, timeIn: new Date('2026-03-24T08:00:00'), status: 'PRESENT' },
+      { sessionId: session4.id, studentId: cs101Students[0].id, timeIn: new Date('2026-03-24T08:20:00'), status: 'LATE' },
+      { sessionId: session4.id, studentId: cs101Students[1].id, status: 'ABSENT' },
+      { sessionId: session4.id, studentId: cs101Students[2].id, timeIn: new Date('2026-03-24T08:00:00'), status: 'PRESENT' },
     ],
   });
 
@@ -435,9 +435,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: itSession1.id, studentId: it101Students[0].student!.id, timeIn: new Date('2026-03-17T13:05:00'), status: 'PRESENT' },
-      { sessionId: itSession1.id, studentId: it101Students[1].student!.id, timeIn: new Date('2026-03-17T13:02:00'), status: 'PRESENT' },
-      { sessionId: itSession1.id, studentId: it101Students[2].student!.id, status: 'ABSENT' },
+      { sessionId: itSession1.id, studentId: it101Students[0].id, timeIn: new Date('2026-03-17T13:05:00'), status: 'PRESENT' },
+      { sessionId: itSession1.id, studentId: it101Students[1].id, timeIn: new Date('2026-03-17T13:02:00'), status: 'PRESENT' },
+      { sessionId: itSession1.id, studentId: it101Students[2].id, status: 'ABSENT' },
     ],
   });
 
@@ -451,9 +451,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: itSession2.id, studentId: it101Students[0].student!.id, timeIn: new Date('2026-03-19T13:01:00'), status: 'PRESENT' },
-      { sessionId: itSession2.id, studentId: it101Students[1].student!.id, timeIn: new Date('2026-03-19T13:20:00'), status: 'LATE' },
-      { sessionId: itSession2.id, studentId: it101Students[2].student!.id, timeIn: new Date('2026-03-19T13:03:00'), status: 'PRESENT' },
+      { sessionId: itSession2.id, studentId: it101Students[0].id, timeIn: new Date('2026-03-19T13:01:00'), status: 'PRESENT' },
+      { sessionId: itSession2.id, studentId: it101Students[1].id, timeIn: new Date('2026-03-19T13:20:00'), status: 'LATE' },
+      { sessionId: itSession2.id, studentId: it101Students[2].id, timeIn: new Date('2026-03-19T13:03:00'), status: 'PRESENT' },
     ],
   });
 
@@ -467,9 +467,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: itSession3.id, studentId: it101Students[0].student!.id, timeIn: new Date('2026-03-24T13:02:00'), status: 'PRESENT' },
-      { sessionId: itSession3.id, studentId: it101Students[1].student!.id, timeIn: new Date('2026-03-24T13:01:00'), status: 'PRESENT' },
-      { sessionId: itSession3.id, studentId: it101Students[2].student!.id, status: 'ABSENT' },
+      { sessionId: itSession3.id, studentId: it101Students[0].id, timeIn: new Date('2026-03-24T13:02:00'), status: 'PRESENT' },
+      { sessionId: itSession3.id, studentId: it101Students[1].id, timeIn: new Date('2026-03-24T13:01:00'), status: 'PRESENT' },
+      { sessionId: itSession3.id, studentId: it101Students[2].id, status: 'ABSENT' },
     ],
   });
 
@@ -483,9 +483,9 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: itSession4.id, studentId: it101Students[0].student!.id, timeIn: new Date('2026-03-26T13:04:00'), status: 'PRESENT' },
-      { sessionId: itSession4.id, studentId: it101Students[1].student!.id, status: 'ABSENT' },
-      { sessionId: itSession4.id, studentId: it101Students[2].student!.id, status: 'ABSENT' },
+      { sessionId: itSession4.id, studentId: it101Students[0].id, timeIn: new Date('2026-03-26T13:04:00'), status: 'PRESENT' },
+      { sessionId: itSession4.id, studentId: it101Students[1].id, status: 'ABSENT' },
+      { sessionId: itSession4.id, studentId: it101Students[2].id, status: 'ABSENT' },
     ],
   });
 
@@ -505,8 +505,8 @@ async function main() {
   });
   await prisma.attendanceRecord.createMany({
     data: [
-      { sessionId: itbSession1.id, studentId: it101bStudents[0].student!.id, timeIn: new Date('2026-03-18T10:05:00'), status: 'PRESENT' },
-      { sessionId: itbSession1.id, studentId: it101bStudents[1].student!.id, timeIn: new Date('2026-03-18T10:03:00'), status: 'PRESENT' },
+      { sessionId: itbSession1.id, studentId: it101bStudents[0].id, timeIn: new Date('2026-03-18T10:05:00'), status: 'PRESENT' },
+      { sessionId: itbSession1.id, studentId: it101bStudents[1].id, timeIn: new Date('2026-03-18T10:03:00'), status: 'PRESENT' },
     ],
   });
 
@@ -526,13 +526,13 @@ async function main() {
   // ============================================================
   // Diana Prince (student02) - absent March 21 - PENDING medical excuse
   const dianaAbsence = await prisma.attendanceRecord.findFirst({
-    where: { studentId: students[1].student!.id, sessionId: session3.id, status: 'ABSENT' },
+    where: { studentId: students[1].id, sessionId: session3.id, status: 'ABSENT' },
   });
 
   if (dianaAbsence) {
     await prisma.excuseLetter.create({
       data: {
-        studentId: students[1].student!.id,
+        studentId: students[1].id,
         excuseType: 'MEDICAL',
         description: 'I had a high fever and was advised by my doctor to rest for the day.',
         status: 'PENDING',
@@ -551,13 +551,13 @@ async function main() {
 
   // Diana Prince - absent March 24 - PENDING personal excuse
   const dianaAbsence2 = await prisma.attendanceRecord.findFirst({
-    where: { studentId: students[1].student!.id, sessionId: session4.id, status: 'ABSENT' },
+    where: { studentId: students[1].id, sessionId: session4.id, status: 'ABSENT' },
   });
 
   if (dianaAbsence2) {
     await prisma.excuseLetter.create({
       data: {
-        studentId: students[1].student!.id,
+        studentId: students[1].id,
         excuseType: 'PERSONAL',
         description: 'I had a family emergency that required my immediate attention.',
         status: 'PENDING',
@@ -568,13 +568,13 @@ async function main() {
 
   // Julia Roberts (student08) - absent March 17 IT101 - APPROVED excuse
   const juliaAbsence = await prisma.attendanceRecord.findFirst({
-    where: { studentId: students[7].student!.id, sessionId: itSession1.id, status: 'ABSENT' },
+    where: { studentId: students[7].id, sessionId: itSession1.id, status: 'ABSENT' },
   });
 
   if (juliaAbsence) {
     const approvedExcuse = await prisma.excuseLetter.create({
       data: {
-        studentId: students[7].student!.id,
+        studentId: students[7].id,
         excuseType: 'SCHOOL_BUSINESS',
         description: 'I represented the university at a regional programming competition.',
         status: 'APPROVED',
@@ -601,13 +601,13 @@ async function main() {
 
   // Julia Roberts - absent March 24 IT101 - REJECTED excuse
   const juliaAbsence2 = await prisma.attendanceRecord.findFirst({
-    where: { studentId: students[7].student!.id, sessionId: itSession3.id, status: 'ABSENT' },
+    where: { studentId: students[7].id, sessionId: itSession3.id, status: 'ABSENT' },
   });
 
   if (juliaAbsence2) {
     await prisma.excuseLetter.create({
       data: {
-        studentId: students[7].student!.id,
+        studentId: students[7].id,
         excuseType: 'PERSONAL',
         description: 'I overslept and missed the class.',
         status: 'REJECTED',

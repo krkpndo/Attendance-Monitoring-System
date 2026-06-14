@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { TokenPayload } from '../interfaces/token.interface';
 import crypto from 'crypto';
+import { UserType } from '@prisma/client';
 
-export const generateAccessToken = (userId: string, role: string): string => {
+export const generateAccessToken = (userId: string, role: UserType): string => {
 
     const data: TokenPayload = { userId, type: 'access', role };
 
@@ -17,7 +18,7 @@ export const generateAccessToken = (userId: string, role: string): string => {
     );
 };
 
-export const generateRefreshToken = (userId: string, role: string): string => {
+export const generateRefreshToken = (userId: string, role: UserType): string => {
     const data: TokenPayload = { userId, type: 'refresh', role, jti: crypto.randomUUID()  };
 
     const options =  {
@@ -39,7 +40,7 @@ export const verifyRefreshToken = (token: string): TokenPayload => {
     return jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string) as TokenPayload;
 };
 
-export const generateTokenPair = (userId: string, role: string) => {
+export const generateTokenPair = (userId: string, role: UserType) => {
 
     return {
         accessToken: generateAccessToken(userId, role),
