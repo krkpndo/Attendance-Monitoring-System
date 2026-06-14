@@ -161,9 +161,10 @@ export const getStudents = async (req: Request, res: Response, next: NextFunctio
 
 export const revokeRfid = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const studentId = req.params.userId as string;
+    const userId = req.params.userId as string;
+    const { reason } = req.body ?? {};
 
-    const result = await AdminService.revokeRfid(studentId);
+    const result = await AdminService.revokeRfid(req.user!.userId, userId, reason);
 
     return res.json({
         success: true,

@@ -2,7 +2,9 @@ import prisma from '../config/prisma';
 import argon2 from 'argon2';
 import { AppError } from '../utils/app_error';
 import { CreateClassDto, CreateCourseDto, CreateUserDto, GetAttendanceRecordsDto, GetClassesFilter, SetClassSchedultDto, StudentSearchFilter, UpdateClassDto, UpdateCourseDto, UpdateProfessorProfileDto, UpdateStudentProfileDto, UpdateUserProfileDto } from '../interfaces/admin.interface';
-import { Prisma, RfidRequestStatus } from '@prisma/client';
+import { ExcuseStatus, Prisma, RfidRequestStatus } from '@prisma/client';
+import AuditService from './audit.service';
+import NotificationService from './notification.service';
 
 class AdminService {
 
@@ -352,7 +354,7 @@ class AdminService {
     return students;
   }
 
-  static async revokeRfid(userId: string, reason?: string) {
+  static async revokeRfid(adminUserId: string ,userId: string, reason?: string) {
     const student = await prisma.student.findUnique({
       where: { userId },
     });
@@ -369,10 +371,37 @@ class AdminService {
       throw new AppError('Student has no active RFID card to revoke', 400, 'NO_ACTIVE_RFID');
     }
 
-    return prisma.rfidCard.update({
-      where: { id: activeCard.id },
-      data: { status: 'REVOKED', revokedAt: new Date(), revokedReason: reason ?? 'Reported lost' }
+    const revokedReason = reason ?? 'Reported lost';
+
+    const updatedCard = await prisma.$transaction(async (tx) => {
+
+      const card = await tx.rfidCard.update({
+        where: { id: activeCard.id },
+        data: { status: 'REVOKED', revokedAt: new Date(), revokedReason }
+      });
+
+      await AuditService.log({
+        actorId: adminUserId,
+        action: 'RFID_REVOKED',
+        entityType: 'RfidCard',
+        entityId: activeCard.id,
+        description: revokedReason,
+        oldValue: { status: 'ACTIVE' },
+        newValue: { status: 'REVOKED' }
+      }, tx);
+
+      return card;
     });
+
+    await NotificationService.safeCreate({
+      userId,
+      type: 'RFID_CARD_REVOKED',
+      title: 'RFID card revoked',
+      message: `Your RFID card has been revoked: ${revokedReason}`,
+      metadata: { cardId: activeCard.id }
+    });
+
+    return updatedCard;
   }
 
   // Professor Management
@@ -1014,7 +1043,7 @@ class AdminService {
   static async reviewExcuseLetter(
     userId: string,
     excuseId: string,
-    data: { status: 'APPROVED' | 'REJECTED'; rejectionReason?: string }
+    data: { status: Extract<ExcuseStatus, 'APPROVED' | 'REJECTED'>; rejectionReason?: string }
   ) {
     const excuseLetter = await prisma.excuseLetter.findUnique({
       where: { id: excuseId },
@@ -1057,7 +1086,25 @@ class AdminService {
         });
       }
 
+      await AuditService.log({
+        actorId: userId,
+        action: data.status === 'APPROVED' ? 'EXCUSE_APPROVED' : 'EXCUSE_REJECTED',
+        entityType: 'ExcuseLetter',
+        entityId: excuseId,
+        description: data.status === 'REJECTED' ? data.rejectionReason : undefined,
+        oldValue: { status: excuseLetter.status },
+        newValue: { status: data.status }
+      }, tx);
+
       return updatedExcuse;
+    });
+
+    await NotificationService.safeCreate({
+      userId: excuseLetter.studentId,
+      type: data.status === 'APPROVED' ? 'EXCUSE_APPROVED' : 'EXCUSE_REJECTED',
+      title: data.status === 'APPROVED' ? 'Excuse letter approved' : 'Excuse letter rejected',
+      message: data.status === 'APPROVED' ? 'Your excuse letter has been approved' : `Your excuse letter was rejected: ${data.rejectionReason}`,
+      metadata: { excuseId }
     });
 
     return result;
@@ -1106,7 +1153,8 @@ class AdminService {
 
   static async rejectRfidRequest(adminUserId: string, requestId: string, reason: string) {
     const request = await prisma.rfidRequest.findUnique({
-      where: { id: requestId }
+      where: { id: requestId },
+      include: { student: { select: { userId: true } } }
     });
 
     if (!request) {
@@ -1117,15 +1165,39 @@ class AdminService {
       throw new AppError('This request has already been processd', 400, 'RFID_REQUEST_ALREADY_PROCESSED');
     }
 
-    return prisma.rfidRequest.update({
-      where: { id: requestId },
-      data: {
-        status: 'REJECTED',
-        rejectionReason: reason,
-        resolvedBy: adminUserId,
-        resolvedAt: new Date()
-      }
+    const updatedRequest = await prisma.$transaction(async (tx) => {
+      const updated = await tx.rfidRequest.update({
+        where: { id: requestId },
+        data: {
+          status: 'REJECTED',
+          rejectionReason: reason,
+          resolvedBy: adminUserId,
+          resolvedAt: new Date()
+        }
+      });
+
+      await AuditService.log({
+        actorId: adminUserId,
+        action: 'RFID_REQUEST_REJECTED',
+        entityType: 'RfidRequest',
+        entityId: requestId,
+        description: reason,
+        oldValue: { status: 'PENDING' },
+        newValue: { status: 'REJECTED' }
+      });
+
+      return updated;
     });
+
+    await NotificationService.safeCreate({
+      userId: request.student.userId,
+      type: 'RFID_REQUEST_REJECTED',
+      title: 'RFID request rejected',
+      message: `Your RFID request was rejected: ${reason}`,
+      metadata: { requestId }
+    });
+
+    return updatedRequest;
   }
 }
 
