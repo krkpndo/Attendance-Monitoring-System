@@ -7,6 +7,14 @@ export interface StudentProfileDto {
     profileImage?: string;
 }
 
+export interface StudentUpdateProfileDto {
+    name?: string;
+    email?: string;
+    username?: string;
+    password: string;
+    profileImage?: string; 
+}
+
 export interface SubmitExcuseLetterDto {
     excuseType: ExcuseType;
     description: string;

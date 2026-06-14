@@ -3,8 +3,8 @@ import * as StudentController from '../controllers/student.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { excuseUpload } from '../config/attachment-upload';
 import { validate } from '../middlewares/validation.middleware';
-import { registerRfidSchema, submitExcuseLetterSchema } from '../validators/student.validators';
-import { updateProfileSchema } from '../validators/shared.validators';
+import { registerRfidSchema, studentUpdateProfileSchema, submitExcuseLetterSchema } from '../validators/student.validators';
+import { profileUpload } from '../config/profile-upload';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.use(authenticate, authorize('STUDENT'));
 
 // Profile
 router.get('/profile', StudentController.getStudentProfile);
-router.patch('/profile', validate(updateProfileSchema), StudentController.updateProfile);
+router.patch('/profile', profileUpload.single('profileImage'), validate(studentUpdateProfileSchema), StudentController.updateProfile);
 
 // RFID
 router.patch('/rfid/register', validate(registerRfidSchema), StudentController.registerRFID);

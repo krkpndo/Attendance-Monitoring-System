@@ -10,7 +10,7 @@ router.use(authenticate, authorize('PROFESSOR'));
 
 // Profile
 router.get('/profile', ProfessorController.getProfile);
-router.patch('/profile', profileUpload.single('profile-image'), ProfessorController.updateProfile);
+router.patch('/profile', profileUpload.single('profileImage'), ProfessorController.updateProfile);
 
 // Classes
 router.get('/classes', ProfessorController.getAssignedClasses);

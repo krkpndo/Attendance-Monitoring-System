@@ -2,8 +2,9 @@ import { NextFunction, Request, Response } from "express";
 import StudentService from "../services/student.service";
 import { AppError } from "../utils/app_error";
 import NotificationService from "../services/notification.service";
-import multer from "multer";
 import { UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
+import path from "path";
+import fs from "fs";
 
 export const getStudentProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -49,14 +50,14 @@ export const registerRFID = async (req: Request, res: Response, next: NextFuncti
 
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { name, email, username, password, newPassword } = req.body || {};
+        const { name, email, username, password } = req.body;
 
         const profileImage = req.file
             ? `/uploads/profiles/${req.file.filename}`
             : undefined;
 
         await StudentService.updateProfile(req.user!.userId, {
-            name, email, username, password, newPassword, profileImage
+            name, email, username, password, profileImage
         });
 
         return res.status(200).json({
@@ -64,6 +65,11 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
             message: 'Profile updated successfully'
         });
     } catch (error) {
+        if (req.file) {
+            const p = path.join(process.cwd(), 'uploads', 'profiles', req.file.filename);
+
+            if (fs.existsSync(p)) fs.unlinkSync(p);
+        }
         next(error);
     }
 };

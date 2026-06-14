@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import dotenv from 'dotenv';
 import { verifyAccessToken } from '../utils/token_utils';
+import { UserType } from '@prisma/client';
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 };
 
-export const authorize = (...roles: string[]) => {
+export const authorize = (...roles: UserType[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({

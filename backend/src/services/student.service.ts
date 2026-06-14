@@ -2,9 +2,10 @@ import prisma from "../config/prisma";
 import { AppError } from "../utils/app_error";
 import path from 'path';
 import fs from 'fs';
-import { StudentAbsencesDto, StudentAttendanceDto, SubmitExcuseLetterDto, UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
-import { UpdateProfileDto } from "../interfaces/professor.interface";
+import { StudentAbsencesDto, StudentAttendanceDto, StudentUpdateProfileDto, SubmitExcuseLetterDto, UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
 import argon2 from 'argon2';
+import id from "zod/v4/locales/id.js";
+import { Prisma } from "@prisma/client";
 
 class StudentService {
     static async getStudentProfile (studentId: string) {
@@ -47,38 +48,51 @@ class StudentService {
             throw new AppError('RFID is already registered', 400, 'RFID_ALREADY_REGISTERED');
         }
     
-        const existingRfid = await prisma.student.findUnique({
-            where: { rfidNumber }
+        const existingRfid = await prisma.student.findFirst({
+            where: { rfidNumber, NOT: { userId: studentId } }
         });
     
         if (existingRfid) {
             throw new AppError('This RFID card is already in use', 400, 'RFID_IN_USE');
         }
-    
-        const updatedInfo = await prisma.student.update({
-            where: { userId: studentId },
-            data: {
-                rfidNumber,
-                rfidStatus: 'ACTIVE',
-                verificationStatus: 'RFID_VERIFIED',
-                registeredAt: new Date()
-            },
-            select: {
-                rfidNumber: true,
-                rfidStatus: true,
-                verificationStatus: true,
-                registeredAt: true,
+
+        try {
+            return await prisma.student.update({
+                where: { userId: studentId },
+                data: {
+                    rfidNumber,
+                    rfidStatus: 'ACTIVE',
+                    verificationStatus: 'RFID_VERIFIED',
+                    registeredAt: new Date()
+                },
+                select: {
+                    rfidNumber: true,
+                    rfidStatus: true,
+                    verificationStatus: true,
+                    registeredAt: true,
+                }
+            });
+        } catch (err) {
+            
+            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P20002') {
+                throw new AppError('This RFID card is already in use', 400, 'RFID_IN_USE');
             }
-        });
-    
-        return updatedInfo;
+            throw err;
+        }
     }
 
-    static async updateProfile(userId: string, data: UpdateProfileDto) {
+    static async updateProfile(userId: string, data: StudentUpdateProfileDto) {
         const student = await prisma.student.findUnique({
             where: { userId },
             include: {
-                user: { select: { password: true, profileImage: true, email: true, username: true } }
+                user: {
+                    select: {
+                        password: true,
+                        profileImage: true,
+                        email: true,
+                        username: true
+                    }
+                }
             }
         });
     
@@ -86,13 +100,9 @@ class StudentService {
             throw new AppError('Student profile not found', 404, 'NOT_FOUND');
         }
 
-        if (!data.password) {
-            throw new AppError('Current password is required to update profile', 400, 'PASSWORD_REQUIRED');
-        }
+        const isValidPassword = await argon2.verify(student.user.password, data.password);
 
-        const validPassword = await argon2.verify(student.user.password, data.password);
-
-        if (!validPassword) {
+        if (!isValidPassword) {
             throw new AppError('Incorrect password', 401, 'INVALID_PASSWORD');
         }
 
@@ -100,6 +110,7 @@ class StudentService {
             const emailExists = await prisma.user.findFirst({
                 where: { email: data.email, NOT: { id: userId } }
             });
+
             if (emailExists) {
                 throw new AppError('Email already exists', 400, 'EMAIL_EXISTS');
             }
@@ -109,6 +120,7 @@ class StudentService {
             const usernameExists = await prisma.user.findFirst({
                 where: { username: data.username, NOT: { id: userId } }
             });
+            
             if (usernameExists) {
                 throw new AppError('Username already exists', 400, 'USERNAME_EXISTS');
             }
@@ -126,24 +138,11 @@ class StudentService {
             email: data.email,
             username: data.username,
             profileImage: data.profileImage,
-        };
-
-        if (data.newPassword) {
-            updateData.password = await argon2.hash(data.newPassword);
         }
     
         await prisma.user.update({
             where: { id: userId },
-            data: updateData,
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                username: true,
-                type: true,
-                status: true,
-                profileImage: true
-            }
+            data: updateData
         });
     }
 
