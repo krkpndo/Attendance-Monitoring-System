@@ -24,6 +24,6 @@ export const submitExcuseLetterSchema = z.object({
 
 export const submitRfidRequestSchema = z.object({
     type: z.enum(['LOST', 'DAMAGED', 'NEW'], {
-        message: 'Type must be PENDING, FULFILLED, or REJECTED'
-    }).optional()
+        message: 'Type must be LOST, DAMAGED, or NEW'
+    })
 });
