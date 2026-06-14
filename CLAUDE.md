@@ -101,3 +101,14 @@ routes/ → middlewares (validate, authenticate, authorize) → controllers/ →
 - Keep the route → controller → service → Prisma separation; do not put Prisma queries in controllers or HTTP handling in services.
 - Services are static-method classes; new business logic should follow that pattern and surface failures as `AppError`.
 - **Use Prisma-generated enum types — never re-type their values.** When a value is backed by a Prisma enum (`Semester`, `ClassStatus`, `VerificationStatus`, `ExcuseStatus`, `RfidRequestStatus`, `RfidRequestType`, etc.), import the generated type from `@prisma/client` and use it for service params, DTO/interface fields, and controller casts. **Do not** hand-write `'A' | 'B'` string-literal unions and **do not** widen to plain `string` — the schema is the single source of truth, and raw literals silently drift when the enum changes. For a deliberate *subset* of an enum (e.g. excuse review allows only `APPROVED`/`REJECTED`, not `PENDING`), derive it with `Extract<ExcuseStatus, 'APPROVED' | 'REJECTED'>` rather than retyping bare literals. The **one** exception is Zod `z.enum([...])` at the route boundary, which legitimately needs runtime string literals — but the service/DTO types those validated values flow into must still be the generated enum.
+- **Commit messages: use a heredoc, not repeated `-m` flags.** When the message has a subject + body, write it with a quoted heredoc so the formatting (blank line after subject, wrapped paragraphs, trailer) stays intact:
+  ```bash
+  git commit -F - <<'EOF'
+  type(scope): subject line
+
+  Body paragraph explaining the what/why.
+
+  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+  EOF
+  ```
+  Quote the delimiter (`<<'EOF'`) so the shell doesn't expand backticks/`$` in the message. Don't stack multiple `-m` flags for multi-paragraph messages.
