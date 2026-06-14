@@ -91,7 +91,9 @@ routes/ → middlewares (validate, authenticate, authorize) → controllers/ →
 - **`RfidRequest`** is the student's channel to request a card (`type`: `LOST` | `DAMAGED` | `NEW`; `status`: `PENDING` | `FULFILLED` | `REJECTED`; FK → `Student.id`, mirroring `RfidCard`; `resolvedBy` → `User.id` for the admin, mirroring `ExcuseLetter.approvedBy`). Rules: at most **one `PENDING` request per student**; **`LOST`/`DAMAGED` immediately revoke the active card in the same transaction as creating the request** (closes the misuse window the instant the student reports); `NEW` is for students with no active card. Admins see the queue (`AdminService.getRfidRequests`) and can `rejectRfidRequest`; there is **no fulfill endpoint** — a request **auto-closes to `FULFILLED`** when the student successfully registers a new card (so the request resolves the moment a working card actually exists; auto-closed requests have a null `resolvedBy`).
 
 ### Notifications & audit
-- `NotificationService` and the `Notification` model back in-app alerts (absence alerts, excuse status changes, etc.). `AuditLog` records privileged actions (manual attendance, overrides, excuse decisions, session/enrollment/RFID/status changes) via the `AuditAction` enum. **Note (as of this work):** the audit infra is *defined but unwired* — no `auditLog.create` calls exist yet, and `AuditLog.entityId` is typed `Int` while all entity ids are UUID `String`s (a latent bug to fix before audit logging is used). `NotificationType` also has no RFID values yet.
+- `NotificationService` and the `Notification` model back in-app alerts (absence alerts, excuse status changes, etc.). `AuditLog` records privileged actions (manual attendance, overrides, excuse decisions, session/enrollment/RFID/status changes) via the `AuditAction` enum.
+- **Emission layer (partially wired):** `AuditService.log(input, client?)` (`src/services/audit.service.ts`) writes audit rows; pass a transaction client (`tx`) to make the audit **atomic with the action** it records, else it defaults to the global client. The standing pattern for privileged actions is **audit inside the `$transaction`, notification after commit via `NotificationService.safeCreate` (best-effort — a notification failure must never roll back or surface on the action)**. `AuditLog.entityId` is now `String` (UUID). **Currently wired:** excuse approve/reject and RFID revoke/request-reject (in `AdminService`). **Not yet wired:** attendance/session/enrollment/user-status actions, inbound notifications (excuse-submitted → reviewer, rfid-request → admins), and `ipAddress` capture (the column exists but nothing threads `req.ip` into services yet) — follow these same patterns when adding them.
+- `AuditService.log` and `NotificationService.createNotification`/`safeCreate` take the **generated enum types** (`AuditAction`, `NotificationType`) — never pass raw strings or `as any` (see the enum-types convention below).
 
 ## Conventions
 - TypeScript is `strict` with `noUncheckedIndexedAccess` on — array/index access yields `T | undefined`; handle it.
@@ -99,3 +101,14 @@ routes/ → middlewares (validate, authenticate, authorize) → controllers/ →
 - Keep the route → controller → service → Prisma separation; do not put Prisma queries in controllers or HTTP handling in services.
 - Services are static-method classes; new business logic should follow that pattern and surface failures as `AppError`.
 - **Use Prisma-generated enum types — never re-type their values.** When a value is backed by a Prisma enum (`Semester`, `ClassStatus`, `VerificationStatus`, `ExcuseStatus`, `RfidRequestStatus`, `RfidRequestType`, etc.), import the generated type from `@prisma/client` and use it for service params, DTO/interface fields, and controller casts. **Do not** hand-write `'A' | 'B'` string-literal unions and **do not** widen to plain `string` — the schema is the single source of truth, and raw literals silently drift when the enum changes. For a deliberate *subset* of an enum (e.g. excuse review allows only `APPROVED`/`REJECTED`, not `PENDING`), derive it with `Extract<ExcuseStatus, 'APPROVED' | 'REJECTED'>` rather than retyping bare literals. The **one** exception is Zod `z.enum([...])` at the route boundary, which legitimately needs runtime string literals — but the service/DTO types those validated values flow into must still be the generated enum.
+- **Commit messages: use a heredoc, not repeated `-m` flags.** When the message has a subject + body, write it with a quoted heredoc so the formatting (blank line after subject, wrapped paragraphs, trailer) stays intact:
+  ```bash
+  git commit -F - <<'EOF'
+  type(scope): subject line
+
+  Body paragraph explaining the what/why.
+
+  Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+  EOF
+  ```
+  Quote the delimiter (`<<'EOF'`) so the shell doesn't expand backticks/`$` in the message. Don't stack multiple `-m` flags for multi-paragraph messages.

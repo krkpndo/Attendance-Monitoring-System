@@ -1,4 +1,5 @@
 import prisma from "../config/prisma";
+import { CreateNotificationInput } from "../interfaces/notification.interface";
 import { AppError } from "../utils/app_error";
 
 class NotificationService {
@@ -31,26 +32,25 @@ class NotificationService {
         return updated;
     }
 
-    static async createNotification(
-        data: {
-            userId: string;
-            type: string;
-            title: string;
-            message: string;
-            metadata?: any;
-        }
-    ) {
-        const notification = await prisma.notification.create({
+    static async createNotification(data: CreateNotificationInput) {
+
+        return prisma.notification.create({
             data: {
                 userId: data.userId,
-                type: data.type as any,
+                type: data.type,
                 title: data.title,
                 message: data.message,
                 metadata: data.metadata
             }
         });
+    }
 
-        return notification;
+    static async safeCreate(data: CreateNotificationInput) {
+        try {
+            await this.createNotification(data);
+        } catch (error) {
+            console.error('[NotificationService] failed to deliver notification', error);
+        }
     }
 
     static async getUnreadCount(userId: string) {

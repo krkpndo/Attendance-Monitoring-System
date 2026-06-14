@@ -19,11 +19,6 @@ router.patch('/users/professors/:userId', AdminController.updateProfessor);
 
 // Student Management
 router.get('/students', validate(getStudentsQuerySchema), AdminController.getStudents);
-router.patch('/students/:userId/rfid/revoke', AdminController.revokeRfid);
-
-// Untested
-// router.post('/students/:studentId/rfid', AdminController.assignRfid);
-
 
 // Professor Management
 router.get('/professors', AdminController.getProfessors);
@@ -62,7 +57,7 @@ router.get('/notifications', AdminController.getNotifications);
 router.patch('/notifications/:notificationId/read', AdminController.markNotificationAsRead);
 
 // RFID
-router.patch('/students/:userId/revoke', AdminController.revokeRfid);
+router.patch('/students/:userId/rfid/revoke', AdminController.revokeRfid);
 router.get('/rfid/requests', validate(getRfidRequestsQuerySchema), AdminController.getRfidRequests);
 router.patch('/rfid/requests/:requestId/reject', validate(rejectRfidRequestSchema), AdminController.rejectRfidRequest);
 

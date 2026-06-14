@@ -76,7 +76,8 @@ enum AuditAction {
   SESSION_CLOSED
   SESSION_CANCELLED
   ENROLLMENT_DROPPED
-  RFID_DEACTIVATED
+  RFID_REVOKED
+  RFID_REQUEST_REJECTED
   USER_STATUS_CHANGED
 }
 
@@ -88,6 +89,8 @@ enum NotificationType {
   SESSION_OPENED
   SESSION_CANCELLED
   ENROLLMENT_DROPPED
+  RFID_CARD_REVOKED
+  RFID_REQUEST_REJECTED
 }
 
 enum VerificationStatus {
@@ -358,7 +361,7 @@ model AuditLog {
   userId      String      @map("user_id")
   action      AuditAction
   entityType  String      @map("entity_type")
-  entityId    Int         @map("entity_id")
+  entityId    String         @map("entity_id")
   description String?
   oldValue    Json?       @map("old_value")
   newValue    Json?       @map("new_value")
