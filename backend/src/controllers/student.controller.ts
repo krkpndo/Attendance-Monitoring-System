@@ -193,11 +193,12 @@ export const submitExcuseLetter = async (req: Request, res: Response, next: Next
     try {
         const { excuseType, description, attendanceRecordIds } = req.body;
 
-        await StudentService.submitExcuseLetter(req.user!.userId, { excuseType, description, attendanceRecordIds });
+        const result = await StudentService.submitExcuseLetter(req.user!.userId, { excuseType, description, attendanceRecordIds });
 
         return res.status(201).json({
             success: true,
             message: 'Excuse letter submission success',
+            data: result
         });
     } catch (error) {
         next(error);
