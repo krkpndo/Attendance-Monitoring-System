@@ -35,7 +35,7 @@ export const registerRFID = async (req: Request, res: Response, next: NextFuncti
     const { userId } = req.user!;
 
     try {
-        const updatedStudentInfo = await StudentService.updateRfidInfo(userId, rfidNumber);
+        const updatedStudentInfo = await StudentService.registerRfid(userId, rfidNumber);
 
         return res.status(200).json({
             success: true,
@@ -315,5 +315,35 @@ export const markNotificationsAsRead = async (req: Request, res: Response) => {
             message: 'Internal Server Error',
             code: 'SERVER_ERROR'
         });
+    }
+};
+
+export const submitRfidRequest = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { type, note } = req.body;
+
+        const result = await StudentService.submitRfidRequest(req.user!.userId, { type, note });
+
+        return res.status(201).json({
+            success: true,
+            message: 'RFID request submitted',
+            data: result
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getRfidRequests = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await StudentService.getRfidRequests(req.user!.userId);
+
+        return res.status(200).json({
+            success: true,
+            message: 'RFID requests retrieved successfully',
+            data: result
+        });
+    } catch (error) {
+        next(error);
     }
 };

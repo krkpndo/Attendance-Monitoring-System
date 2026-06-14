@@ -4,8 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { StudentAbsencesDto, StudentAttendanceDto, StudentUpdateProfileDto, SubmitExcuseLetterDto, UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
 import argon2 from 'argon2';
-import id from "zod/v4/locales/id.js";
-import { Prisma } from "@prisma/client";
+import { RfidRequestType } from "@prisma/client";
 
 class StudentService {
     static async getStudentProfile (studentId: string) {
@@ -24,6 +23,14 @@ class StudentService {
                         updatedAt: true,
                         createdAt: true
                     }
+                },
+                rfidCards: {
+                    where: { status: 'ACTIVE' },
+                    select: {
+                        rfidNumber: true,
+                        status: true,
+                        issuedAt: true
+                    }
                 }
             }
         });
@@ -35,50 +42,47 @@ class StudentService {
         return record;
     }
 
-    static async updateRfidInfo(studentId: string, rfidNumber: string) {
+    static async registerRfid(userId: string, rfidNumber: string) {
         const student = await prisma.student.findUnique({
-            where: { userId: studentId }
+            where: { userId }
         });
     
         if (!student) {
             throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
         }
     
-        if (student.verificationStatus === 'RFID_VERIFIED') {
-            throw new AppError('RFID is already registered', 400, 'RFID_ALREADY_REGISTERED');
-        }
-    
-        const existingRfid = await prisma.student.findFirst({
-            where: { rfidNumber, NOT: { userId: studentId } }
+        const existingCard = await prisma.rfidCard.findUnique({
+            where: { rfidNumber }
         });
     
-        if (existingRfid) {
-            throw new AppError('This RFID card is already in use', 400, 'RFID_IN_USE');
+        if (existingCard) {
+            throw existingCard.status === 'REVOKED'
+                ? new AppError('This RFID card has been revoked and cannot be reused', 400, 'RFID_REVOKED')
+                : new AppError('This RFID card is already in use', 400, 'RFID_IN_USE');
         }
 
-        try {
-            return await prisma.student.update({
-                where: { userId: studentId },
-                data: {
-                    rfidNumber,
-                    rfidStatus: 'ACTIVE',
-                    verificationStatus: 'RFID_VERIFIED',
-                    registeredAt: new Date()
-                },
-                select: {
-                    rfidNumber: true,
-                    rfidStatus: true,
-                    verificationStatus: true,
-                    registeredAt: true,
-                }
-            });
-        } catch (err) {
-            
-            if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P20002') {
-                throw new AppError('This RFID card is already in use', 400, 'RFID_IN_USE');
-            }
-            throw err;
+        const activeCard = await prisma.rfidCard.findFirst({
+            where: { studentId: student.id, status: 'ACTIVE' }
+        });
+
+        if (activeCard) {
+            throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_REGISTERED');
         }
+
+        return prisma.$transaction(async (tx) => {
+
+            const card = await tx.rfidCard.create({
+                data: { rfidNumber, studentId: student.id, status: 'ACTIVE' },
+                select: { rfidNumber: true, status: true, issuedAt: true }
+            });
+
+            await tx.rfidRequest.updateMany({
+                where: { studentId: student.id, status: 'PENDING' },
+                data: { status: 'FULFILLED', resolvedAt: new Date() }
+            });
+
+            return card;
+        });
     }
 
     static async updateProfile(userId: string, data: StudentUpdateProfileDto) {
@@ -552,6 +556,90 @@ class StudentService {
         }
     
         return excuseLetter;
+    }
+
+    static async submitRfidRequest(
+        userId: string,
+        data: { type: RfidRequestType; note?: string }
+    ) {
+        const student = await prisma.student.findUnique({ where: { userId } });
+
+        if (!student) {
+            throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
+        }
+
+        const pendingRequest = await prisma.rfidRequest.findFirst({
+            where: { studentId: student.id, status: 'PENDING' }
+        });
+
+        if (pendingRequest) {
+            throw new AppError('You already have a pending RFID request', 400, 'RFID_REQUEST_PENDING');
+        }
+
+        const activeCard = await prisma.rfidCard.findFirst({
+            where: { studentId: student.id, status: 'ACTIVE' }
+        });
+
+        if (data.type === 'NEW') {
+            if (activeCard) {
+                throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_ACTIVE');
+            }
+
+            return prisma.rfidRequest.create({
+                data: { studentId: student.id, type: 'NEW', note: data.note },
+                select: { id: true, type: true, status: true, note: true, createdAt: true }
+            });
+        }
+
+        if (!activeCard) {
+            throw new AppError('You have no active RFID card to report', 400, 'NO_ACTIVE_RFID');
+        }
+
+        return prisma.$transaction(async (tx) => {
+            await tx.rfidCard.update({
+                where: { id: activeCard.id },
+                data: {
+                    status: 'REVOKED',
+                    revokedAt: new Date(),
+                    revokedReason: data.type === 'LOST'
+                        ? 'Reported lost by student'
+                        : 'Reported damaged by student'
+                }
+            });
+
+            return tx.rfidRequest.create({
+                data: { studentId: student.id, type: data.type, note: data.note },
+                select: {
+                    id: true,
+                    type: true,
+                    status: true,
+                    note: true,
+                    createdAt: true
+                }
+            });
+        });
+    }
+
+    static async getRfidRequests(userId: string) {
+        const student = await prisma.student.findUnique({ where: { userId } });
+
+        if (!student) {
+            throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
+        }
+
+        return prisma.rfidRequest.findMany({
+            where: { studentId: student.id },
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                type: true,
+                status: true,
+                note: true,
+                rejectionReason: true,
+                resolvedAt: true,
+                createdAt: true
+            }
+        });
     }
 }
 

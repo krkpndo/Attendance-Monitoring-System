@@ -21,3 +21,9 @@ export const submitExcuseLetterSchema = z.object({
     attendanceRecordIds: z.array(z.string().uuid('Invalid attendance record ID'))
         .min(1, 'At least one attendance record is required')
 });
+
+export const submitRfidRequestSchema = z.object({
+    type: z.enum(['LOST', 'DAMAGED', 'NEW'], {
+        message: 'Type must be PENDING, FULFILLED, or REJECTED'
+    }).optional()
+});

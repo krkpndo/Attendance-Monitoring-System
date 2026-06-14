@@ -1,4 +1,4 @@
-import { RfidStatus, UserType } from "@prisma/client";
+import { ClassStatus, Semester, UserType, VerificationStatus } from "@prisma/client";
 
 export interface CreateUserDto {
     username: string;
@@ -21,7 +21,6 @@ export interface CreateUserDto {
 
 export interface UpdateStudentProfileDto {
   studentNumber?: string;
-  rfidStatus?: RfidStatus;
   yearLevel?: number;
   program?: string;
   section?: string;
@@ -46,7 +45,7 @@ export interface StudentSearchFilter {
   program?: string;
   yearLevel?: number;
   section?: string;
-  verificationStatus?: string;
+  verificationStatus?: VerificationStatus;
 }
 
 export interface CreateCourseDto {
@@ -67,7 +66,7 @@ export interface CreateClassDto {
   professorId: string;
   section: string;
   schoolYear: string;
-  semester: string;
+  semester: Semester;
   room?: string;
 }
 
@@ -75,15 +74,15 @@ export interface GetClassesFilter {
   courseId?: string;
   professorId?: string;
   schoolYear?: string;
-  semester?: string;
-  status?: string;
+  semester?: Semester;
+  status?: ClassStatus;
 }
 
 export interface UpdateClassDto {
   professorId?: string;
   section?: string;
   room?: string;
-  status?: string;
+  status?: ClassStatus;
 }
 
 export interface SetClassSchedultDto {

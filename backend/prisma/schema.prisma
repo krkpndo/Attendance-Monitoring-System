@@ -100,6 +100,18 @@ enum RfidCardStatus {
   REVOKED
 }
 
+enum RfidRequestType {
+  LOST
+  DAMAGED
+  NEW
+}
+
+enum RfidRequestStatus {
+  PENDING
+  FULFILLED
+  REJECTED
+}
+
 // MODELS
 
 model User {
@@ -117,23 +129,24 @@ model User {
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   // Profile relations
-  student         Student?
-  professor       Professor?
-  session         Session?
-  passwordResets  PasswordReset[]
+  student               Student?
+  professor             Professor?
+  session               Session?
+  passwordResets        PasswordReset[]
+  resolvedRfidRequests  RfidRequest[]       @relation("RfidRequestResolver")
 
   // Class relations
-  professorClasses    Class[]             @relation("ProfessorClasses")
-  classEnrollments    ClassEnrollment[]
-  attendanceRecords   AttendanceRecord[]  @relation("StudentAttendance")
-  excuseLetters       ExcuseLetter[]      @relation("StudentExcuse")
+  professorClasses      Class[]             @relation("ProfessorClasses")
+  classEnrollments      ClassEnrollment[]
+  attendanceRecords     AttendanceRecord[]  @relation("StudentAttendance")
+  excuseLetters         ExcuseLetter[]      @relation("StudentExcuse")
 
   // Action relations
-  cancelledSessions   AttendanceSession[] @relation("CancelledByUser")
-  recordedAttendances AttendanceRecord[]  @relation("RecordedByUser")
-  approvedExcuses     ExcuseLetter[]      @relation("ApprovedByUser")
-  auditLogs           AuditLog[]
-  notifications       Notification[]
+  cancelledSessions     AttendanceSession[] @relation("CancelledByUser")
+  recordedAttendances   AttendanceRecord[]  @relation("RecordedByUser")
+  approvedExcuses       ExcuseLetter[]      @relation("ApprovedByUser")
+  auditLogs             AuditLog[]
+  notifications         Notification[]
 
   @@map("users")
 }
@@ -152,6 +165,7 @@ model Student {
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   rfidCards RfidCard[]
+  rfidRequests RfidRequest[]
 
   @@map("students")
 }
@@ -420,4 +434,25 @@ model RfidCard {
 
   @@index([studentId])
   @@map("rfid_cards")
+}
+
+model RfidRequest {
+  id                String                @id @default(uuid())
+  studentId         String                @map("student_id")
+  type              RfidRequestType
+  status            RfidRequestStatus     @default(PENDING)
+  note              String?
+  resolvedBy        String?               @map("resolved_by")
+  resolvedAt        DateTime?             @map("resolved_at")
+  rejectionReason   String?               @map("rejection_reason")
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt  @map("updated_at")
+
+  // Relations
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  resolvedByUser User?  @relation("RfidRequestResolver", fields: [resolvedBy], references: [id])
+
+  @@index([studentId])
+  @@index([status])
+  @@map("rfid_requests")
 }
