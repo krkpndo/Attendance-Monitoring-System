@@ -972,10 +972,10 @@ class AdminService {
   }
 
   // Excuse Oversight
-  static async getAllExcuseLetters(filters?: { status?: string; studentId?: string }) {
+  static async getAllExcuseLetters(filters?: { status?: ExcuseStatus; studentId?: string }) {
     const excuseLetters = await prisma.excuseLetter.findMany({
       where: {
-        ...(filters?.status && { status: filters.status as any }),
+        ...(filters?.status && { excuseDates: { some: { status: filters.status } } }),
         ...(filters?.studentId && { studentId: filters.studentId }),
       },
       include: {
@@ -984,6 +984,7 @@ class AdminService {
         },
         excuseDates: {
           include: {
+            reviewedByUser: { select: { name: true } },
             attendanceRecord: {
               include: {
                 session: {
@@ -1027,7 +1028,6 @@ class AdminService {
           }
         },
         attachments: true,
-        approvedByUser: { select: { name: true } },
       },
       orderBy: { submittedAt: 'desc' },
       omit: {
@@ -1045,41 +1045,43 @@ class AdminService {
     excuseId: string,
     data: { status: Extract<ExcuseStatus, 'APPROVED' | 'REJECTED'>; rejectionReason?: string }
   ) {
+    if (data.status === 'REJECTED' && !data.rejectionReason) {
+      throw new AppError('Rejecton reason is required', 400, 'REJECTION_REASON_REQUIRED');
+    };
+
     const excuseLetter = await prisma.excuseLetter.findUnique({
       where: { id: excuseId },
-      include: { excuseDates: { select: { attendanceId: true } } },
+      select: { id: true, studentId: true }
     });
 
     if (!excuseLetter) {
       throw new AppError('Excuse letter not found', 404, 'EXCUSE_NOT_FOUND');
     }
 
-    if (excuseLetter.status !== 'PENDING') {
-      throw new AppError('Excuse letter has already been processed', 400, 'EXCUSE_ALREADY_PROCESSED');
+    const pendingDates = await prisma.excuseDate.findMany({
+      where: { excuseId, status: 'PENDING' },
+      select: { id: true, attendanceId: true }
+    });
+
+    if (pendingDates.length === 0) {
+      throw new AppError('Excuse letter has already been fully reviewed', 400, 'EXCUSE_ALREADY_PROCESSED');
     }
 
-    if (data.status === 'REJECTED' && !data.rejectionReason) {
-      throw new AppError('Rejection reason is required', 400, 'REJECTION_REASON_REQUIRED');
-    }
+    const dateIds = pendingDates.map((d) => d.id);
+    const attendanceIds = pendingDates.map((d) => d.attendanceId);
 
     const result = await prisma.$transaction(async (tx) => {
-      const updatedExcuse = await tx.excuseLetter.update({
-        where: { id: excuseId },
+      await tx.excuseDate.updateMany({
+        where: { id: { in: dateIds } },
         data: {
           status: data.status,
-          approvedBy: userId,
-          approvalDate: new Date(),
-          rejectionReason: data.rejectionReason,
-        },
-        omit: {
-          createdAt: true,
-          updatedAt: true
+          reviewedBy: userId,
+          reviewedAt: new Date(),
+          rejectionReason: data.status === 'REJECTED' ? data.rejectionReason : null
         }
       });
 
       if (data.status === 'APPROVED') {
-        const attendanceIds = excuseLetter.excuseDates.map((d) => d.attendanceId);
-
         await tx.attendanceRecord.updateMany({
           where: { id: { in: attendanceIds } },
           data: { status: 'EXCUSED' },
@@ -1091,12 +1093,12 @@ class AdminService {
         action: data.status === 'APPROVED' ? 'EXCUSE_APPROVED' : 'EXCUSE_REJECTED',
         entityType: 'ExcuseLetter',
         entityId: excuseId,
-        description: data.status === 'REJECTED' ? data.rejectionReason : undefined,
-        oldValue: { status: excuseLetter.status },
-        newValue: { status: data.status }
+        description: `Admin override${data.status === 'REJECTED' ? `: ${data.rejectionReason}` : ''}`,
+        oldValue: { status: 'PENDING' },
+        newValue: { status: data.status, affectedRecords: attendanceIds.length, override: true }
       }, tx);
 
-      return updatedExcuse;
+      return { excuseId, status: data.status, affectedRecords: attendanceIds.length };
     });
 
     await NotificationService.safeCreate({

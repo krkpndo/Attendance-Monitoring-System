@@ -2,19 +2,12 @@ import { NextFunction, Request, Response } from 'express';
 import AdminService from '../services/admin.service';
 import NotificationService from '../services/notification.service';
 import { AppError } from '../utils/app_error';
-import { ClassStatus, RfidRequestStatus, Semester, VerificationStatus } from '@prisma/client';
+import { ClassStatus, ExcuseStatus, RfidRequestStatus, Semester, VerificationStatus } from '@prisma/client';
 
 // User Management
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { username, email, name, type, studentData, professorData } = req.body;
-
-    if (!username || !email || !name || !type) {
-      return res.status(400).json({
-        success: false,
-        message: 'Username, password, email, name, and type are required'
-      });
-    }
 
     const result = await AdminService.createUser({
       username, email, name, type, studentData, professorData,
@@ -201,13 +194,6 @@ export const createCourse = async (req: Request, res: Response, next: NextFuncti
   try {
     const { courseCode, courseName, courseDescription, units } = req.body;
 
-    if (!courseCode || !courseName || !units) {
-      return res.status(400).json({
-        success: false,
-        message: 'Course code, name, and units are required'
-      });
-    }
-
     const result = await AdminService.createCourse({ courseCode, courseName, courseDescription, units });
 
     return res.status(201).json({
@@ -270,13 +256,6 @@ export const updateCourse = async (req: Request, res: Response, next: NextFuncti
 export const createClass = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { courseId, professorId, section, schoolYear, semester, room } = req.body;
-
-    if (!courseId || !professorId || !section || !schoolYear || !semester) {
-        return res.status(400).json({
-            success: false,
-            message: 'Course ID, professor ID, section, school year, and semester are required'
-        });
-    }
 
     const result = await AdminService.createClass({ courseId, professorId, section, schoolYear, semester, room });
 
@@ -354,13 +333,6 @@ export const setClassSchedule = async (req: Request, res: Response, next: NextFu
     const classId = req.params.classId as string;
     const { schedules } = req.body;
 
-    if (!schedules || !Array.isArray(schedules) || schedules.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one schedule is required'
-      });
-    }
-
     const result = await AdminService.setClassSchedule(classId, schedules);
 
     return res.status(200).json({
@@ -379,13 +351,6 @@ export const enrollStudent = async (req: Request, res: Response, next: NextFunct
   try {
     const classId = req.params.classId as string;
     const { studentId } = req.body;
-
-    if (!studentId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Student ID is required'
-      });
-    }
 
     const result = await AdminService.enrollStudent(classId, studentId);
 
@@ -482,7 +447,7 @@ export const getExcuseLetters = async (req: Request, res: Response, next: NextFu
     const { status, studentId } = req.query;
 
     const result = await AdminService.getAllExcuseLetters({
-      status: status as string | undefined,
+      status: status as ExcuseStatus | undefined,
       studentId: studentId as string | undefined,
     });
 
@@ -501,20 +466,6 @@ export const reviewExcuseLetter = async (req: Request, res: Response, next: Next
   try {
     const excuseId = req.params.excuseId as string;
     const { status, rejectionReason } = req.body;
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status is required'
-      });
-    }
-
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status must be APPROVED or REJECTED'
-      });
-    }
 
     const result = await AdminService.reviewExcuseLetter(req.user!.userId, excuseId, {
       status,

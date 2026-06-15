@@ -25,13 +25,6 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     try {
         const { refreshToken } = req.body;
 
-        if (!refreshToken) {
-            return res.status(400).json({
-                success: false,
-                message: 'Refresh token is required'
-            });
-        }
-
         const tokens = await AuthService.refreshSession(refreshToken);
 
         return res.status(200).json({

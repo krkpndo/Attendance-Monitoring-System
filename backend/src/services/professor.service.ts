@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import { MarkAttendanceDto, ReviewExcuseLetterDto, UpdateProfileDto } from "../interfaces/professor.interface";
 import argon2 from 'argon2';
+import AuditService from "./audit.service";
+import NotificationService from "./notification.service";
 
 class ProfessorService {
     static async getProfessorProfile(userId: string) {
@@ -490,6 +492,7 @@ class ProfessorService {
                 },
                 excuseDates: {
                     include: {
+                        reviewedByUser: { select: { name: true } },
                         attendanceRecord: {
                             include: {
                                 session: {
@@ -534,7 +537,6 @@ class ProfessorService {
                     }
                 },
                 attachments: true,
-                approvedByUser: { select: { name: true } },
             },
             omit: {
                 studentId: true,
@@ -551,54 +553,76 @@ class ProfessorService {
     }
 
     static async reviewExcuseLetter(param: ReviewExcuseLetterDto) {
-        const excuseLetter = await prisma.excuseLetter.findFirst({
-            where: {
-                id: param.excuseId,
-                status: 'PENDING',
-                excuseDates: {
-                    some: {
-                        attendanceRecord: {
-                            session: {
-                                class: { professorId: param.userId },
-                            },
-                        },
-                    },
-                },
-            },
-            include: {
-                excuseDates: { select: { attendanceId: true } },
-            },
-        });
+        const { userId, excuseId, data } = param;
 
-        if (!excuseLetter) {
-            throw new AppError('Pending excuse letter not found', 404, 'EXCUSE_NOT_FOUND');
-        }
-
-        if (param.data.status === 'REJECTED' && !param.data.rejectionReason) {
+        if (data.status === 'REJECTED' && !data.rejectionReason) {
             throw new AppError('Rejection reason is required', 400, 'REJECTION_REASON_REQUIRED');
         }
 
+        const excuseLetter = await prisma.excuseLetter.findUnique({
+            where: { id: excuseId },
+            select: { id: true, studentId: true }
+        });
+
+        if (!excuseLetter) {
+            throw new AppError('Excuse letter not found', 404, 'EXCUSE_NOT_FOUND');
+        }
+
+        const pendingDates = await prisma.excuseDate.findMany({
+            where: {
+                excuseId,
+                status: 'PENDING',
+                attendanceRecord: { session: { class: { professorId: userId } } }
+            },
+            select: { id: true, attendanceId: true }
+        });
+
+        if (pendingDates.length === 0) {
+            throw new AppError('No pending excuse dates for your classes in this letter', 404, 'EXCUSE_NOT_FOUND');
+        }
+
+        const dateIds = pendingDates.map((d) => d.id);
+        const attendanceIds = pendingDates.map((d) => d.attendanceId);
+
         const result = await prisma.$transaction(async (tx) => {
-            const updatedExcuse = await tx.excuseLetter.update({
-                where: { id: param.excuseId },
+            await tx.excuseDate.updateMany({
+                where: { id: { in: dateIds } },
                 data: {
-                    status: param.data.status,
-                    approvedBy: param.userId,
-                    approvalDate: new Date(),
-                    rejectionReason: param.data.rejectionReason,
-                },
+                    status: data.status,
+                    reviewedBy: userId,
+                    reviewedAt: new Date(),
+                    rejectionReason: data.status === 'REJECTED' ? data.rejectionReason : null
+                }
             });
 
-            if (param.data.status === 'APPROVED') {
-                const attendanceIds = excuseLetter.excuseDates.map((d) => d.attendanceId);
-
+            if (data.status === 'APPROVED') {
                 await tx.attendanceRecord.updateMany({
                     where: { id: { in: attendanceIds } },
-                    data: { status: 'EXCUSED' },
+                    data: { status: 'EXCUSED' }
                 });
             }
 
-            return updatedExcuse;
+            await AuditService.log({
+                actorId: userId,
+                action: data.status === 'APPROVED' ? 'EXCUSE_APPROVED' : 'EXCUSE_REJECTED',
+                entityType: 'ExcuseLetter',
+                entityId: excuseId,
+                description: data.status === 'REJECTED' ? data.rejectionReason : undefined,
+                oldValue: { status: 'PENDING' },
+                newValue: { status: data.status, affectedRecords: attendanceIds.length }
+            }, tx);
+
+            return { excuseId, status: data.status, affectedRecords: attendanceIds.length };
+        });
+
+        await NotificationService.safeCreate({
+            userId: excuseLetter.studentId,
+            type: data.status === 'APPROVED' ? 'EXCUSE_APPROVED' : 'EXCUSE_REJECTED',
+            title: data.status === 'APPROVED' ? 'Excuse approved' : 'Excuse Rejected',
+            message: data.status === 'APPROVED'
+                ? `Your excuse was approved for ${attendanceIds.length} class record(s).`
+                : `You excuse was rejected for ${attendanceIds.length} class record(s): ${data.rejectionReason}`,
+                metadata: result
         });
 
         return result;

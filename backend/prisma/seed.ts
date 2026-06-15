@@ -338,7 +338,7 @@ async function main() {
 
   await prisma.classEnrollment.createMany({ data: enrollmentData });
 
-  console.log('📝 Created 20 enrollments');
+  console.log('📝 Created 21 enrollments (incl. 1 cross-professor fixture)');
 
   // ============================================================
   // Attendance Sessions - CS101 BSCS-3A (class1) - 5 sessions
@@ -522,8 +522,45 @@ async function main() {
   console.log('📋 Created 2 attendance sessions for IT101-2B (1 SCHEDULED)');
 
   // ============================================================
+  // Cross-professor fixture (per-class excuse approval testing)
+  // Charlie Brown (student01) is enrolled in CS101 (prof1) and also
+  // IT101 (prof2), with a LATE in CS101 and an ABSENT in IT101, so a
+  // single PENDING excuse letter spans two different professors.
+  // ============================================================
+  await prisma.classEnrollment.create({
+    data: { classId: class6.id, studentId: students[0].id },
+  });
+
+  const charlieItAbsence = await prisma.attendanceRecord.create({
+    data: { sessionId: itSession1.id, studentId: students[0].id, status: 'ABSENT' },
+  });
+
+  const charlieCsLate = await prisma.attendanceRecord.findFirst({
+    where: { studentId: students[0].id, sessionId: session4.id, status: 'LATE' },
+  });
+
+  if (charlieCsLate) {
+    await prisma.excuseLetter.create({
+      data: {
+        studentId: students[0].id,
+        excuseType: 'MEDICAL',
+        description: 'Hospitalized for the day; this covers both my CS101 and IT101 classes.',
+        excuseDates: {
+          create: [
+            { attendanceId: charlieCsLate.id },
+            { attendanceId: charlieItAbsence.id },
+          ],
+        },
+      },
+    });
+  }
+
+  // ============================================================
   // Excuse Letters
   // ============================================================
+  let juliaApprovedExcuseId = '';
+  let juliaRejectedExcuseId = '';
+
   // Diana Prince (student02) - absent March 21 - PENDING medical excuse
   const dianaAbsence = await prisma.attendanceRecord.findFirst({
     where: { studentId: students[1].id, sessionId: session3.id, status: 'ABSENT' },
@@ -535,7 +572,6 @@ async function main() {
         studentId: students[1].id,
         excuseType: 'MEDICAL',
         description: 'I had a high fever and was advised by my doctor to rest for the day.',
-        status: 'PENDING',
         excuseDates: { create: { attendanceId: dianaAbsence.id } },
         attachments: {
           create: {
@@ -560,7 +596,6 @@ async function main() {
         studentId: students[1].id,
         excuseType: 'PERSONAL',
         description: 'I had a family emergency that required my immediate attention.',
-        status: 'PENDING',
         excuseDates: { create: { attendanceId: dianaAbsence2.id } },
       },
     });
@@ -577,10 +612,14 @@ async function main() {
         studentId: students[7].id,
         excuseType: 'SCHOOL_BUSINESS',
         description: 'I represented the university at a regional programming competition.',
-        status: 'APPROVED',
-        approvedBy: prof2.id,
-        approvalDate: new Date('2026-03-18T10:00:00'),
-        excuseDates: { create: { attendanceId: juliaAbsence.id } },
+        excuseDates: {
+          create: {
+            attendanceId: juliaAbsence.id,
+            status: 'APPROVED',
+            reviewedBy: prof2.id,
+            reviewedAt: new Date('2026-03-18T10:00:00'),
+          },
+        },
         attachments: {
           create: {
             fileName: 'competition_letter.pdf',
@@ -592,7 +631,9 @@ async function main() {
       },
     });
 
-    // Update attendance record to EXCUSED
+    juliaApprovedExcuseId = approvedExcuse.id;
+
+    // Approved -> the attendance record is excused
     await prisma.attendanceRecord.update({
       where: { id: juliaAbsence.id },
       data: { status: 'EXCUSED' },
@@ -605,21 +646,27 @@ async function main() {
   });
 
   if (juliaAbsence2) {
-    await prisma.excuseLetter.create({
+    const rejectedExcuse = await prisma.excuseLetter.create({
       data: {
         studentId: students[7].id,
         excuseType: 'PERSONAL',
         description: 'I overslept and missed the class.',
-        status: 'REJECTED',
-        approvedBy: prof2.id,
-        approvalDate: new Date('2026-03-25T09:00:00'),
-        rejectionReason: 'Oversleeping is not a valid excuse for missing class.',
-        excuseDates: { create: { attendanceId: juliaAbsence2.id } },
+        excuseDates: {
+          create: {
+            attendanceId: juliaAbsence2.id,
+            status: 'REJECTED',
+            reviewedBy: prof2.id,
+            reviewedAt: new Date('2026-03-25T09:00:00'),
+            rejectionReason: 'Oversleeping is not a valid excuse for missing class.',
+          },
+        },
       },
     });
+
+    juliaRejectedExcuseId = rejectedExcuse.id;
   }
 
-  console.log('📨 Created 4 excuse letters (2 PENDING, 1 APPROVED, 1 REJECTED)');
+  console.log('📨 Created 5 excuse letters (3 PENDING incl. 1 cross-professor, 1 APPROVED, 1 REJECTED)');
 
   // ============================================================
   // Notifications
@@ -652,9 +699,9 @@ async function main() {
   // ============================================================
   await prisma.auditLog.createMany({
     data: [
-      { userId: prof2.id, action: 'EXCUSE_APPROVED', entityType: 'ExcuseLetter', entityId: 1, description: 'Approved school business excuse for Julia Roberts', ipAddress: '192.168.1.10' },
-      { userId: prof2.id, action: 'EXCUSE_REJECTED', entityType: 'ExcuseLetter', entityId: 2, description: 'Rejected personal excuse for Julia Roberts - invalid reason', ipAddress: '192.168.1.10' },
-      { userId: admin1.id, action: 'USER_STATUS_CHANGED', entityType: 'User', entityId: 1, description: 'Seed data initialization', ipAddress: '127.0.0.1' },
+      { userId: prof2.id, action: 'EXCUSE_APPROVED', entityType: 'ExcuseLetter', entityId: juliaApprovedExcuseId, description: 'Approved school business excuse for Julia Roberts', ipAddress: '192.168.1.10' },
+      { userId: prof2.id, action: 'EXCUSE_REJECTED', entityType: 'ExcuseLetter', entityId: juliaRejectedExcuseId, description: 'Rejected personal excuse for Julia Roberts - invalid reason', ipAddress: '192.168.1.10' },
+      { userId: admin1.id, action: 'USER_STATUS_CHANGED', entityType: 'User', entityId: students[0].id, description: 'Seed data initialization', ipAddress: '127.0.0.1' },
     ],
   });
 
@@ -699,9 +746,9 @@ async function main() {
   console.log('');
   console.log('📊 Data Summary:');
   console.log('   2 admins, 5 professors, 15 students');
-  console.log('   8 courses, 10 classes, 20 enrollments');
+  console.log('   8 courses, 10 classes, 21 enrollments');
   console.log('   11 attendance sessions (8 closed, 1 open, 1 cancelled, 1 scheduled)');
-  console.log('   4 excuse letters (2 pending, 1 approved, 1 rejected)');
+  console.log('   5 excuse letters (3 pending incl. 1 cross-professor, 1 approved, 1 rejected)');
   console.log('   11 notifications, 3 audit logs');
 }
 

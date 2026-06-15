@@ -4,6 +4,10 @@ export const idParamSchema = z.object({
     classId: z.string().min(1, 'Class ID is required')
 });
 
+export const courseIdParamSchema = z.object({
+    courseId: z.string().min(1, 'Course ID is required')
+});
+
 export const getUsersQuerySchema = z.object({
     type: z.enum(['STUDENT', 'PROFESSOR', 'ADMIN'], {
         message: 'Type must be STUDENT, PROFESSOR, or ADMIN'
@@ -86,11 +90,29 @@ export const getExcuseLettersQuerySchema = z.object({
     studentId: z.string().optional()
 });
 
-export const reviewExcuseLetterSchema = z.object({
-    status: z.enum(['APPROVED', 'REJECTED'], {
-        message: 'Status must be APPROVED or REJECTED'
+export const createUserSchema = z.object({
+    username: z.string().min(5, 'Username must be at least 5 characters').max(50),
+    email: z.email('Invalid email format').max(50),
+    name: z.string().min(1, 'Name is required').max(50),
+    type: z.enum(['STUDENT', 'PROFESSOR', 'ADMIN'], {
+        message: 'Type must be STUDENT, PROFESSOR, or ADMIN'
     }),
-    rejectionReason: z.string().max(500).optional()
+    studentData: z.object({
+        studentNumber: z.string().min(1, 'Student number is required'),
+        yearLevel: z.number().int().min(1).max(6),
+        program: z.string().min(1, 'Program is required'),
+        section: z.string().min(1, 'Section is required'),
+        department: z.string().optional()
+    }).optional(),
+    professorData: z.object({
+        employeeNumber: z.string().min(1, 'Employee number is required'),
+        department: z.string().min(1, 'Department is required'),
+        position: z.string().min(1, 'Position is required')
+    }).optional()
+});
+
+export const enrollStudentSchema = z.object({
+    studentId: z.uuid('Invalid student ID')
 });
 
 export const getRfidRequestsQuerySchema = z.object({

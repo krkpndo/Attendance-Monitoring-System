@@ -2,14 +2,15 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { createClassSchema, createCourseSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, rejectRfidRequestSchema, reviewExcuseLetterSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
+import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, enrollStudentSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, rejectRfidRequestSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
+import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
 
 router.use(authenticate, authorize('ADMIN'));
 
 // User Management
-router.post('/users/create', AdminController.createUser);
+router.post('/users/create', validate(createUserSchema), AdminController.createUser);
 router.get('/users', validate(getUsersQuerySchema, 'query'), AdminController.getUsers);
 router.get('/users/:userId', AdminController.getUserDetail);
 router.patch('/users/:userId', AdminController.updateUser);
@@ -18,7 +19,7 @@ router.patch('/users/students/:userId', AdminController.updateStudent);
 router.patch('/users/professors/:userId', AdminController.updateProfessor);
 
 // Student Management
-router.get('/students', validate(getStudentsQuerySchema), AdminController.getStudents);
+router.get('/students', validate(getStudentsQuerySchema, 'query'), AdminController.getStudents);
 
 // Professor Management
 router.get('/professors', AdminController.getProfessors);
@@ -26,18 +27,18 @@ router.get('/professors', AdminController.getProfessors);
 // Course Management
 router.post('/courses/create', validate(createCourseSchema) ,AdminController.createCourse);
 router.get('/courses', AdminController.getCourses);
-router.get('/courses/:courseId', validate(idParamSchema),AdminController.getCourseDetail);
+router.get('/courses/:courseId', validate(courseIdParamSchema, 'params'), AdminController.getCourseDetail);
 router.patch('/courses/:courseId/update', validate(updateCourseSchema),AdminController.updateCourse);
 
 // Class Management
 router.post('/classes/create', validate(createClassSchema), AdminController.createClass);
-router.get('/classes', validate(getClassesQuerySchema), AdminController.getClasses);
+router.get('/classes', validate(getClassesQuerySchema, 'query'), AdminController.getClasses);
 router.get('/classes/:classId', validate(idParamSchema), AdminController.getClassDetail);
 router.patch('/classes/:classId/update', validate(updateClassSchema), AdminController.updateClass);
 router.put('/classes/:classId/schedule', validate(setClassScheduleSchema), AdminController.setClassSchedule);
 
 // Enrollment Management
-router.post('/classes/:classId/enroll', validate(idParamSchema, 'params'), AdminController.enrollStudent);
+router.post('/classes/:classId/enroll', validate(idParamSchema, 'params'), validate(enrollStudentSchema), AdminController.enrollStudent);
 router.patch('/classes/:classId/students/:studentId/drop', AdminController.dropStudent);
 router.get('/classes/:classId/enrollments', AdminController.getClassEnrollments);
 
@@ -46,7 +47,7 @@ router.get('/attendance', validate(getAttendanceQuerySchema, 'query'), AdminCont
 router.get('/attendance/:classId/report', AdminController.getAttendanceReport);
 
 // Excuse Oversight
-router.get('/excuse-letters', validate(getExcuseLettersQuerySchema), AdminController.getExcuseLetters);
+router.get('/excuse-letters', validate(getExcuseLettersQuerySchema, 'query'), AdminController.getExcuseLetters);
 router.patch('/excuse-letters/:excuseId/review', validate(reviewExcuseLetterSchema) ,AdminController.reviewExcuseLetter);
 
 // Audit Logs
@@ -58,7 +59,7 @@ router.patch('/notifications/:notificationId/read', AdminController.markNotifica
 
 // RFID
 router.patch('/students/:userId/rfid/revoke', AdminController.revokeRfid);
-router.get('/rfid/requests', validate(getRfidRequestsQuerySchema), AdminController.getRfidRequests);
+router.get('/rfid/requests', validate(getRfidRequestsQuerySchema, 'query'), AdminController.getRfidRequests);
 router.patch('/rfid/requests/:requestId/reject', validate(rejectRfidRequestSchema), AdminController.rejectRfidRequest);
 
 export default router;

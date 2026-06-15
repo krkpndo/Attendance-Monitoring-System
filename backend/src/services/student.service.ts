@@ -427,14 +427,17 @@ class StudentService {
     static async uploadExcuseAttachments(param: UploadExcuseLetterAttachmentsDto) {
         const excuseLetter = await prisma.excuseLetter.findFirst({
             where: { id: param.excuseId, studentId: param.userId },
+            include: { excuseDates: { select: { status: true } } }
         });
     
         if (!excuseLetter) {
             throw new AppError('Excuse letter not found', 404, 'EXCUSE_NOT_FOUND');
         }
-    
-        if (excuseLetter.status !== 'PENDING') {
-            throw new AppError('Cannot upload attachments to a processed excuse letter', 400, 'EXCUSE_ALREADY_PROCESSED');
+
+        const alreadyReviewed = excuseLetter.excuseDates.some((d) => d.status !== 'PENDING');
+
+        if (alreadyReviewed) {
+            throw new AppError('Cannot upload attachments once the excuse letter has been reviewed', 400, 'EXCUSE_ALREADY_PROCESSED');
         }
     
         const attachments = await prisma.excuseAttachment.createMany({
@@ -458,7 +461,6 @@ class StudentService {
                 excuseType: true,
                 description: true,
                 submittedAt: true,
-                status: true,
                 excuseDates: {
                     select: {
                         attendanceRecord: {
@@ -496,15 +498,12 @@ class StudentService {
                 excuseType: true,
                 description: true,
                 submittedAt: true,
-                status: true,
-                approvedBy: true,
-                approvalDate: true,
-                rejectionReason: true,
-                approvedByUser: {
-                    select: { name: true }
-                },
                 excuseDates: {
                     select: {
+                        status: true,
+                        reviewedAt: true,
+                        rejectionReason: true,
+                        reviewedByUser: { select: { name: true } },
                         attendanceRecord: {
                             select: {
                                 id: true,
