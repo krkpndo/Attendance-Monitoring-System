@@ -11,3 +11,11 @@ export const updateProfileSchema = z.object({
     password: z.string().min(1, 'Current password is required'),
     newPassword: z.string().min(8, 'New password must be at least 8 characters').optional()
 });
+
+// Excuse review is shared by admin (oversight) and professor (own classes)
+export const reviewExcuseLetterSchema = z.object({
+    status: z.enum(['APPROVED', 'REJECTED'], {
+        message: 'Status must be APPROVED or REJECTED'
+    }),
+    rejectionReason: z.string().max(500).optional()
+});

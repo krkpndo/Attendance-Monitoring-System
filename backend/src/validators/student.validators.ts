@@ -27,3 +27,8 @@ export const submitRfidRequestSchema = z.object({
         message: 'Type must be LOST, DAMAGED, or NEW'
     })
 });
+
+export const getAbsencesQuerySchema = z.object({
+    startDate: z.string().min(1, 'Start date is required'),
+    endDate: z.string().min(1, 'End date is required')
+});

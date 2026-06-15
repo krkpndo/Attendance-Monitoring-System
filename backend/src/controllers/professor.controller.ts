@@ -190,21 +190,6 @@ export const markAttendance = async (req: Request, res: Response, next: NextFunc
     const recordId = req.params.recordId as string;
     const { status, remarks } = req.body;
 
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: 'Attendance status is required'
-      });
-    }
-
-    const validStatus = ['PRESENT', 'LATE', 'ABSENT', 'EXCUSED'];
-    if (!validStatus.includes(status)) {
-        return res.status(400).json({
-            success: false,
-            message: `Status must be one of: ${validStatus.join(', ')}`
-        });
-    }
-
     const markParam: MarkAttendanceDto = {
       userId: req.user!.userId,
       recordId,
@@ -262,20 +247,6 @@ export const reviewExcuseLetter = async (req: Request, res: Response, next: Next
   try {
     const excuseId = req.params.excuseId as string;
     const { status, rejectionReason } = req.body;
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status is required'   
-      });
-    }
-
-    if (!['APPROVED', 'REJECTED'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Status must be APPROVED or REJECTED'
-      });
-    }
 
     const requestParam: ReviewExcuseLetterDto = {
       userId: req.user!.userId,

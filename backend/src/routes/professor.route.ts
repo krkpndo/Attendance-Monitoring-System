@@ -3,6 +3,8 @@ import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as ProfessorController from '../controllers/professor.controller';
 import { profileUpload } from '../config/profile-upload';
 import { validate } from '../middlewares/validation.middleware';
+import { markAttendanceSchema } from '../validators/professor.validator';
+import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
 
@@ -26,12 +28,12 @@ router.patch('/sessions/:sessionId/cancel', ProfessorController.cancelAttendance
 
 // Attendance Records
 router.get('/sessions/:sessionId/attendance', ProfessorController.getAttendanceRecords);
-router.patch('/sessions/attendance/:recordId', ProfessorController.markAttendance);
+router.patch('/sessions/attendance/:recordId', validate(markAttendanceSchema), ProfessorController.markAttendance);
 
 // Excuse Letters
 router.get('/excuse-letters', ProfessorController.getExcuseLetters);
 router.get('/excuse-letters/:excuseId', ProfessorController.getExcuseLetterDetail);
-router.patch('/excuse-letters/:excuseId/review', ProfessorController.reviewExcuseLetter);
+router.patch('/excuse-letters/:excuseId/review', validate(reviewExcuseLetterSchema), ProfessorController.reviewExcuseLetter);
 
 // Notifications
 router.get('/notifications', ProfessorController.getNotifications);

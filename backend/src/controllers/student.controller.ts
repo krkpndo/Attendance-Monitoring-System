@@ -166,13 +166,6 @@ export const getAbsencesByDateRange = async (req: Request, res: Response, next: 
         const startDate = req.query.startDate as string;
         const endDate = req.query.endDate as string;
 
-        if (!startDate || !endDate) {
-            return res.status(400).json({
-                success: false,
-                message: 'Start date and End date are required'
-            });
-        }
-
         const result = await StudentService.getAbsencesByDateRange({
             studentId: userId,
             startDate: new Date(startDate),

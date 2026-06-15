@@ -147,7 +147,7 @@ model User {
   // Action relations
   cancelledSessions     AttendanceSession[] @relation("CancelledByUser")
   recordedAttendances   AttendanceRecord[]  @relation("RecordedByUser")
-  approvedExcuses       ExcuseLetter[]      @relation("ApprovedByUser")
+  reviewedExcuseDates   ExcuseDate[]        @relation("ExcuseDateReviewer")
   auditLogs             AuditLog[]
   notifications         Notification[]
 
@@ -312,16 +312,11 @@ model ExcuseLetter {
   excuseType      ExcuseType   @map("excuse_type")
   description     String
   submittedAt     DateTime     @default(now()) @map("submitted_at")
-  status          ExcuseStatus @default(PENDING)
-  approvedBy      String?      @map("approved_by")
-  approvalDate    DateTime?    @map("approval_date")
-  rejectionReason String?      @map("rejection_reason")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
   // Relations
   student        User              @relation("StudentExcuse", fields: [studentId], references: [id])
-  approvedByUser User?             @relation("ApprovedByUser", fields: [approvedBy], references: [id])
   excuseDates    ExcuseDate[]
   attachments    ExcuseAttachment[]
 
@@ -329,15 +324,21 @@ model ExcuseLetter {
 }
 
 model ExcuseDate {
-  id           String @id @default(uuid())
-  excuseId     String @map("excuse_id")
-  attendanceId String @map("attendance_id")
+  id                String            @id @default(uuid())
+  excuseId          String            @map("excuse_id")
+  attendanceId      String            @map("attendance_id")
+  status            ExcuseStatus      @default(PENDING)
+  reviewedBy        String?           @map("reviewed_by")
+  reviewedAt        DateTime?         @map("reviewed_at")
+  rejectionReason   String?           @map("rejection_reason")
 
   // Relations
   excuseLetter     ExcuseLetter     @relation(fields: [excuseId], references: [id], onDelete: Cascade)
   attendanceRecord AttendanceRecord @relation(fields: [attendanceId], references: [id])
+  reviewedByUser   User?            @relation("ExcuseDateReviewer", fields: [reviewedBy], references: [id])
 
   @@unique([excuseId, attendanceId])
+  @@index([status])
   @@map("excuse_dates")
 }
 
