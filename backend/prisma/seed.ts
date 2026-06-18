@@ -674,12 +674,12 @@ async function main() {
   await prisma.notification.createMany({
     data: [
       // Student notifications
-      { userId: students[1].id, type: 'ABSENCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in CS101 on March 21, 2026.' },
-      { userId: students[1].id, type: 'ABSENCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in CS101 on March 24, 2026.' },
+      { userId: students[1].id, type: 'ATTENDANCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in CS101 on March 21, 2026.' },
+      { userId: students[1].id, type: 'ATTENDANCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in CS101 on March 24, 2026.' },
       { userId: students[7].id, type: 'EXCUSE_APPROVED', title: 'Excuse Approved', message: 'Your excuse letter for IT101 on March 17 has been approved.', isRead: true, readAt: new Date('2026-03-18T12:00:00') },
       { userId: students[7].id, type: 'EXCUSE_REJECTED', title: 'Excuse Rejected', message: 'Your excuse letter for IT101 on March 24 has been rejected. Reason: Oversleeping is not a valid excuse.' },
-      { userId: students[7].id, type: 'ABSENCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in IT101 on March 17, 2026.', isRead: true, readAt: new Date('2026-03-17T15:00:00') },
-      { userId: students[7].id, type: 'ABSENCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in IT101 on March 24, 2026.' },
+      { userId: students[7].id, type: 'ATTENDANCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in IT101 on March 17, 2026.', isRead: true, readAt: new Date('2026-03-17T15:00:00') },
+      { userId: students[7].id, type: 'ATTENDANCE_ALERT', title: 'Absence Recorded', message: 'You were marked absent in IT101 on March 24, 2026.' },
 
       // Professor notifications
       { userId: prof1.id, type: 'EXCUSE_SUBMITTED', title: 'New Excuse Letter', message: 'Diana Prince submitted a medical excuse for CS101 on March 21.' },
@@ -687,8 +687,8 @@ async function main() {
       { userId: prof2.id, type: 'EXCUSE_SUBMITTED', title: 'New Excuse Letter', message: 'Julia Roberts submitted a school business excuse for IT101 on March 17.', isRead: true, readAt: new Date('2026-03-18T09:00:00') },
 
       // Admin notifications
-      { userId: admin1.id, type: 'ABSENCE_ALERT', title: 'Multiple Absences Alert', message: 'Diana Prince (2024-00002) has accumulated 2 absences in CS101.' },
-      { userId: admin1.id, type: 'ABSENCE_ALERT', title: 'Multiple Absences Alert', message: 'Julia Roberts (2024-00008) has accumulated 2 absences in IT101.' },
+      { userId: admin1.id, type: 'ATTENDANCE_ALERT', title: 'Multiple Absences Alert', message: 'Diana Prince (2024-00002) has accumulated 2 absences in CS101.' },
+      { userId: admin1.id, type: 'ATTENDANCE_ALERT', title: 'Multiple Absences Alert', message: 'Julia Roberts (2024-00008) has accumulated 2 absences in IT101.' },
     ],
   });
 

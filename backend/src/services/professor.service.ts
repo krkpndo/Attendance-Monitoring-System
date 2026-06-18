@@ -6,6 +6,7 @@ import { MarkAttendanceDto, ReviewExcuseLetterDto, UpdateProfileDto } from "../i
 import argon2 from 'argon2';
 import AuditService from "./audit.service";
 import NotificationService from "./notification.service";
+import { CreateNotificationInput } from "../interfaces/notification.interface";
 
 class ProfessorService {
     static async getProfessorProfile(userId: string) {
@@ -279,6 +280,18 @@ class ProfessorService {
                 id: sessionId,
                 class: { professorId: userId },
                 status: 'OPEN'
+            },
+            select: {
+                id: true,
+                class: {
+                    select: {
+                        course: {
+                            select: {
+                                courseCode: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -293,6 +306,23 @@ class ProfessorService {
                 closedAt: new Date()
             },
         });
+
+        const absentRecords = await prisma.attendanceRecord.findMany({
+            where: { sessionId, status: 'ABSENT' },
+            select: { studentId: true }
+        });
+
+        const courseCode = session.class.course.courseCode;
+
+        const notifications: CreateNotificationInput[] = absentRecords.map((r) => ({
+            userId: r.studentId,
+            type: 'ATTENDANCE_ALERT',
+            title: 'Marked absent',
+            message: `You were marked absent for ${courseCode}.`,
+            metadata: { sessionId, status: 'ABSENT' }
+        }));
+
+        await NotificationService.safeCreateMany(notifications);
     }
 
     static async cancelAttendanceSession(userId: string, sessionId: string) {
@@ -379,6 +409,15 @@ class ProfessorService {
                 id: param.recordId,
                 session: { class: { professorId: param.userId } },
             },
+            include: {
+                session: {
+                    select: {
+                        class: {
+                            select: { course: { select: { courseCode: true } } }
+                        }
+                    }
+                }
+            }
         });
 
         if (!record) {
@@ -394,6 +433,16 @@ class ProfessorService {
                 remarks: param.data.remarks,
             },
         });
+
+        if (param.data.status === 'LATE') {
+            await NotificationService.safeCreate({
+                userId: record.studentId,
+                type: 'ATTENDANCE_ALERT',
+                title: 'Marked late',
+                message: `You were marked late fro ${record.session.class.course.courseCode}.`,
+                metadata: { recordId: param.recordId, status: 'LATE' }
+            });
+        }
     }
 
     static async getExcuseLetters(userId: string, classId?: string) {
