@@ -4,7 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import { StudentAbsencesDto, StudentAttendanceDto, StudentUpdateProfileDto, SubmitExcuseLetterDto, UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
 import argon2 from 'argon2';
-import { RfidRequestType } from "@prisma/client";
+import { RfidRequestType, RfidRequestStatus } from "@prisma/client";
+import { CreateNotificationInput } from "../interfaces/notification.interface";
+import NotificationService from "./notification.service";
 
 class StudentService {
     static async getStudentProfile (studentId: string) {
@@ -421,6 +423,47 @@ class StudentService {
             }
         });
     
+        const affectedClasses = await prisma.attendanceRecord.findMany({
+            where: { id: { in: data.attendanceRecordIds } },
+            select: {
+                session: {
+                    select: {
+                        class: {
+                            select: {
+                                professorId: true,
+                                course: { select: { courseCode: true } }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const requester = await prisma.user.findUnique({
+            where: { id: studentId },
+            select: { name: true }
+        });
+
+        const coursesByProfessor = new Map<string, Set<string>>();
+
+        for (const record of affectedClasses) {
+
+            const { professorId, course } = record.session.class;
+            const codes = coursesByProfessor.get(professorId) ?? new Set<string>();
+
+            codes.add(course.courseCode);
+            coursesByProfessor.set(professorId, codes);
+        }
+
+        const professorNotifications: CreateNotificationInput[] = [...coursesByProfessor].map(([professorId, codes]) => ({
+            userId: professorId,
+            type: 'EXCUSE_SUBMITTED',
+            title: 'New Excuse Letter',
+            message: `${requester?.name ?? 'A student'} submitted an excuse letter for ${[...codes].join(', ')}.`
+        }));
+
+        await NotificationService.safeCreateMany(professorNotifications);
+
         return excuseLetter;
     }
 
@@ -579,44 +622,74 @@ class StudentService {
             where: { studentId: student.id, status: 'ACTIVE' }
         });
 
+        let request: {
+            id: string;
+            type: RfidRequestType;
+            status: RfidRequestStatus;
+            note: string|null;
+            createdAt: Date;
+        };
+
         if (data.type === 'NEW') {
             if (activeCard) {
                 throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_ACTIVE');
             }
 
-            return prisma.rfidRequest.create({
+            request = await prisma.rfidRequest.create({
                 data: { studentId: student.id, type: 'NEW', note: data.note },
                 select: { id: true, type: true, status: true, note: true, createdAt: true }
             });
+        } else {
+
+            if (!activeCard) {
+                throw new AppError('You have no active RFID card to report', 400, 'NO_ACTIVE_RFID');
+            }
+
+            request = await prisma.$transaction(async (tx) => {
+                await tx.rfidCard.update({
+                    where: { id: activeCard.id },
+                    data: {
+                        status: 'REVOKED',
+                        revokedAt: new Date(),
+                        revokedReason: data.type === 'LOST'
+                            ? 'Reported lost by student'
+                            : 'Reported damaged by student'
+                    }
+                });
+    
+                return tx.rfidRequest.create({
+                    data: { studentId: student.id, type: data.type, note: data.note },
+                    select: {
+                        id: true,
+                        type: true,
+                        status: true,
+                        note: true,
+                        createdAt: true
+                    }
+                });
+            });
         }
 
-        if (!activeCard) {
-            throw new AppError('You have no active RFID card to report', 400, 'NO_ACTIVE_RFID');
-        }
-
-        return prisma.$transaction(async (tx) => {
-            await tx.rfidCard.update({
-                where: { id: activeCard.id },
-                data: {
-                    status: 'REVOKED',
-                    revokedAt: new Date(),
-                    revokedReason: data.type === 'LOST'
-                        ? 'Reported lost by student'
-                        : 'Reported damaged by student'
-                }
-            });
-
-            return tx.rfidRequest.create({
-                data: { studentId: student.id, type: data.type, note: data.note },
-                select: {
-                    id: true,
-                    type: true,
-                    status: true,
-                    note: true,
-                    createdAt: true
-                }
-            });
+        const admins = await prisma.user.findMany({
+            where: { type: 'ADMIN', status: 'ACTIVE' },
+            select: { id: true }
         });
+
+        const requester = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true }
+        });
+
+        const adminNotifications: CreateNotificationInput[] = admins.map((admin) => ({
+            userId: admin.id,
+            type: 'RFID_REQUEST_SUBMITTED',
+            title: 'New RFID request',
+            message: `${requester?.name ?? 'A student'} (${student.studentNumber}) submitted a ${request.type} RFID request.`
+        }));
+
+        await NotificationService.safeCreateMany(adminNotifications);
+
+        return request;
     }
 
     static async getRfidRequests(userId: string) {

@@ -14,9 +14,6 @@ router.use(authenticate, authorize('STUDENT'));
 router.get('/profile', StudentController.getStudentProfile);
 router.patch('/profile', profileUpload.single('profileImage'), validate(studentUpdateProfileSchema), StudentController.updateProfile);
 
-// RFID
-router.patch('/rfid/register', validate(registerRfidSchema), StudentController.registerRFID);
-
 // Classes
 router.get('/classes', StudentController.getClasses);
 router.get('/classes/schedule', StudentController.getClassSchedule);

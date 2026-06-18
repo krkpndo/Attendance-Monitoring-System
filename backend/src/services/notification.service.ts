@@ -60,6 +60,24 @@ class NotificationService {
 
         return count;
     }
+
+    static async safeCreateMany(data: CreateNotificationInput[]) {
+        if (data.length === 0) return;
+
+        try {
+            await prisma.notification.createMany({
+                data: data.map((d) => ({
+                    userId: d.userId,
+                    type: d.type,
+                    title: d.title,
+                    message: d.message,
+                    metadata: d.metadata
+                }))
+            });
+        } catch (error) {
+            console.error('[NotificationService] failed to deliver batch notifications', error);
+        }
+    }
 }
 
 export default NotificationService;

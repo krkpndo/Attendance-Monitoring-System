@@ -546,7 +546,6 @@ class AdminService {
       throw new AppError('Course not found', 404, 'COURSE_NOT_FOUND');
     }
 
-    // professorId is now a user ID, so check users table
     const professor = await prisma.user.findFirst({
       where: { id: data.professorId, type: 'PROFESSOR' },
     });
@@ -579,6 +578,14 @@ class AdminService {
         createdAt: true,
         updatedAt: true
       }
+    });
+
+    await NotificationService.safeCreate({
+      userId: data.professorId,
+      type: 'CLASS_ASSIGNED',
+      title: 'New class assigned',
+      message: `You were assigned to ${newClass.course.courseCode} (${newClass.section}).`,
+      metadata: { classId: newClass.id }
     });
 
     return newClass;
@@ -702,12 +709,23 @@ class AdminService {
       }
     });
 
+    if (data.professorId && data.professorId !== classRecord.professorId) {
+      await NotificationService.safeCreate({
+        userId: data.professorId,
+        type: 'CLASS_ASSIGNED',
+        title: 'New class assigned',
+        message: `You were assigned to ${updated.course.courseCode} (${updated.section}).`,
+        metadata: { classId }
+      });
+    }
+
     return updated;
   }
 
   static async setClassSchedule(classId: string, schedules: SetClassSchedultDto[]) {
     const classRecord = await prisma.class.findUnique({
       where: { id: classId },
+      include: { course: { select: { courseCode: true } } }
     });
 
     if (!classRecord) {
@@ -735,6 +753,13 @@ class AdminService {
       }
     });
 
+    await NotificationService.safeCreate({
+      userId: classRecord.professorId,
+      type: 'SCHEDULE_CHANGED',
+      title: 'Schedule updated',
+      message: `The schedule for ${classRecord.course.courseCode} was updated.`
+    });
+
     return newSchedules;
   }
 
@@ -742,13 +767,13 @@ class AdminService {
   static async enrollStudent(classId: string, studentId: string) {
     const classRecord = await prisma.class.findUnique({
       where: { id: classId },
+      include: { course: { select: { courseCode: true } } }
     });
 
     if (!classRecord) {
       throw new AppError('Class not found', 404, 'CLASS_NOT_FOUND');
     }
 
-    // studentId is now a user ID, so check users table
     const student = await prisma.user.findFirst({
       where: { id: studentId, type: 'STUDENT' },
     });
@@ -775,6 +800,14 @@ class AdminService {
         },
       });
 
+      await NotificationService.safeCreate({
+        userId: studentId,
+        type: 'ENROLLMENT_ADDED',
+        title: 'Enrolled in class',
+        message: `You were enrolled in ${classRecord.course.courseCode}.`,
+        metadata: { classId }
+      });
+
       return reEnrolled;
     }
 
@@ -792,12 +825,21 @@ class AdminService {
       }
     });
 
+    await NotificationService.safeCreate({
+      userId: studentId,
+      type: 'ENROLLMENT_ADDED',
+      title: 'Enrolled in class',
+      message: `You were enrolled in ${classRecord.course.courseCode}.`,
+      metadata: { classId }
+    });
+
     return enrollment;
   }
 
   static async dropStudent(classId: string, studentId: string) {
     const enrollment = await prisma.classEnrollment.findUnique({
       where: { classId_studentId: { classId, studentId } },
+      include: { class: { include: { course: { select: { courseCode: true } } } } }
     });
 
     if (!enrollment) {
@@ -818,6 +860,14 @@ class AdminService {
         createdAt: true,
         updatedAt: true
       }
+    });
+
+    await NotificationService.safeCreate({
+      userId: studentId,
+      type: 'ENROLLMENT_DROPPED',
+      title: 'Dropped from class',
+      message: `You were dropped from ${enrollment.class.course.courseCode}.`,
+      metadata: { classId }
     });
 
     return updated;
