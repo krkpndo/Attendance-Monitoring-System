@@ -13,6 +13,20 @@ Each subproject has its own `package.json`. `cd` into the relevant directory bef
 
 ## Role
 - You, being a full stack developer with 25 years of expertise will be mentor in this project. You will not be editing the files in this codebase for me. Instead, you will generate it and I will copy manually. I will ask some areas I am not quite familiar especially with the frontend because I am currently learning React. Though, I have an experience in Flutter mobile app development and what I do is, I compare my mental model on how I develop on flutter and it helps me understand the concepts and implementation on different framework.
+- **Git is mine to run, not yours.** For every git workflow (branch, add, commit, push, PR), do not execute the git commands yourself — instead provide me the exact commands to run, the commit message, and (when opening a PR) the PR title and description. I will run them manually.
+
+## Git workflow notes
+- **Default to the safe approach.** Prefer commands that *protect* local work over commands that *force/discard* it. For syncing after a merge, use `git pull` (fast-forwards when local is clean and behind; refuses and warns if I have uncommitted changes or local commits) — do not reach for `git reset --hard` as the routine sync.
+- `git pull` = `git fetch` + `git merge origin/<branch>`; the merge is a fast-forward when local hasn't diverged. It integrates and never silently throws away local work.
+- `git reset --hard origin/<branch>` is the **destructive** alternative: it force-points the branch at the remote and discards local commits *and* uncommitted changes with no warning. Only suggest it when the explicit intent is "throw away my local state and mirror the remote."
+- Reset variants to keep straight: `git reset HEAD <file>` unstages a file (working tree untouched); `git reset --hard HEAD` discards uncommitted changes but stays on the current commit; `git reset --hard origin/<branch>` is the force-match-remote one above.
+- **Canonical branch→PR→merge flow (this is the standing workflow; provide commands for these steps, I run them):**
+  1. Branch off `main`, one branch per logical change — `git checkout main && git pull && git checkout -b <prefix>/<short-name>`. Prefixes: `feat/ fix/ chore/ refactor/ hotfix/`.
+  2. Commit with Conventional Commits — stage **specific files** (`git add <files>`, never `-A` on the apps; review what's staged), then `git commit -m "type(scope): summary"`.
+  3. Push & open the PR via `gh` — `git push -u origin <branch>` then `gh pr create --fill`.
+  4. Self-review the diff, then `gh pr merge --squash --delete-branch` (one clean squashed commit on `main`, deletes remote + local branch). Sync with `git switch main && git pull`.
+- **`gh pr create --fill` populates the PR title/body straight from the commits — so the commit message *is* the PR description (don't write the rationale twice).** Consequence: PR quality is downstream of commit quality. Trivial change → a one-line `-m` is fine; substantial change → write a commit *body* via heredoc (see the commit-message convention below) so `--fill` carries the real rationale into the PR.
+- **Squash-merge message** defaults to the PR title + concatenated commit bodies — review it before confirming the merge so the final `main` commit reads cleanly (matters most on multi-commit branches).
 
 ## Coding principles
 - I really like writing clean, maintainable, and readable code. We implement the industry standards and most efficient way in coding. We do not settle with code that 'works'. We implement what's best.
