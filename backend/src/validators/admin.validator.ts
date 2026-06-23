@@ -124,3 +124,15 @@ export const getRfidRequestsQuerySchema = z.object({
 export const rejectRfidRequestSchema = z.object({
     reason: z.string().min(1, 'REJECTION reason is required').max(500)
 });
+
+export const registerDeviceSchema = z.object({
+    label: z.string().min(1, 'Label is required').max(100)
+});
+
+export const deviceIdParamSchema = z.object({
+    deviceId: z.string().min(1, 'Device ID is required')
+});
+
+export const revokeDeviceSchema = z.object({
+    reason: z.string().max(255).optional()
+});

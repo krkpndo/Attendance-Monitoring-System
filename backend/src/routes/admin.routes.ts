@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, enrollStudentSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, rejectRfidRequestSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
+import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
 import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
@@ -61,5 +61,10 @@ router.patch('/notifications/:notificationId/read', AdminController.markNotifica
 router.patch('/students/:userId/rfid/revoke', AdminController.revokeRfid);
 router.get('/rfid/requests', validate(getRfidRequestsQuerySchema, 'query'), AdminController.getRfidRequests);
 router.patch('/rfid/requests/:requestId/reject', validate(rejectRfidRequestSchema), AdminController.rejectRfidRequest);
+
+// Device Management
+router.post('/devices', validate(registerDeviceSchema), AdminController.registerDevice);
+router.get('/devices', AdminController.getDevices);
+router.patch('/devices/:deviceId/revoke', validate(deviceIdParamSchema, 'params'), validate(revokeDeviceSchema), AdminController.revokeDevice);
 
 export default router;

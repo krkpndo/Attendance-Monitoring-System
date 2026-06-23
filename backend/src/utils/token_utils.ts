@@ -58,3 +58,5 @@ export const getTokenExpiry = (token: string): Date => {
 
     return new Date(seconds * 1000);
 }
+
+export const generateDeviceToken = (): string => `dev_${crypto.randomBytes(32).toString('base64url')}`;

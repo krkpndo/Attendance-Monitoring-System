@@ -567,3 +567,46 @@ export const rejectRfidRequest = async (req: Request, res: Response, next: NextF
     next(error);
   } 
 };
+
+// Devices
+export const registerDevice = async (req: Request, res: Response, next: NextFunction) => {
+  const { label } = req.body;
+  const result = await AdminService.registerDevice(req.user!.userId, label);
+
+  return res.status(201).json({
+    success: true,
+    message: 'Device registered',
+    data: result
+  });
+};
+
+export const getDevices = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await AdminService.getDevices();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Devices retrieved',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const revokeDevice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const deviceId = req.params.deviceId as string;
+    const { reason } = req.body ?? {};
+
+    const result = await AdminService.revokeDevice(req.user!.userId, deviceId, reason);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Device revoked',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
