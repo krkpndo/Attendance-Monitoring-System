@@ -5,6 +5,7 @@ import { CreateClassDto, CreateCourseDto, CreateUserDto, GetAttendanceRecordsDto
 import { ExcuseStatus, Prisma, RfidRequestStatus } from '@prisma/client';
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
+import { generateDeviceToken, hashToken } from '../utils/token_utils';
 
 class AdminService {
 
@@ -1250,6 +1251,104 @@ class AdminService {
     });
 
     return updatedRequest;
+  }
+
+  static async registerDevice(adminUserId: string, label: string) {
+    const token = generateDeviceToken();
+    const tokenHash = hashToken(token);
+
+    const device = await prisma.$transaction(async (tx) => {
+
+      const created = await tx.device.create({
+        data: { label, tokenHash },
+        omit: { tokenHash: true }
+      });
+
+      await AuditService.log({
+        actorId: adminUserId,
+        action: 'DEVICE_REGISTERED',
+        entityType: 'Device',
+        entityId: created.id,
+        newValue: { label }
+      }, tx);
+
+      return created;
+    });
+
+    return { ...device, token };
+  }
+
+  static async getDevices() {
+
+    const devices = await prisma.device.findMany({
+      omit: { tokenHash: true },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        attendanceSessions: {
+          orderBy: { openedAt: 'desc' },
+          take: 1,
+          select: {
+            openedAt: true,
+            class: { select: { professor: { select: { id: true, name: true } } } }
+          }
+        }
+      }
+    });
+
+    return devices.map(({ attendanceSessions, ...device }) => {
+
+      const last = attendanceSessions[0];
+
+      return {
+        ...device,
+        lastUsedBy: last
+          ? {
+              id: last.class.professor.id,
+              name: last.class.professor.name,
+              at: last.openedAt
+            }
+          : null
+      };
+    });
+  }
+
+  static async revokeDevice(adminUserId: string, deviceId: string, reason?: string) {
+    const device = await prisma.device.findUnique({
+      where: { id: deviceId }
+    });
+
+    if (!device) {
+      throw new AppError('Device not found', 404, 'DEVICE_NOT_FOUND');
+    }
+
+    if (device.status === 'REVOKED') {
+      throw new AppError('Device is already revoked', 400, 'DEVICE_ALREADY_REVOKED');
+    }
+
+    const revokedReason = reason ?? 'Revoked by admin';
+
+    const updated = await prisma.$transaction(async (tx) => {
+
+      const revokeDevice = await tx.device.update({
+        where: { id: deviceId },
+        data: { status: 'REVOKED', revokedAt: new Date(), revokedReason },
+        omit: { tokenHash: true }
+      });
+
+      await AuditService.log({
+        actorId: adminUserId,
+        action: 'DEVICE_REVOKED',
+        entityType: 'Device',
+        entityId: deviceId,
+        description: revokedReason,
+        oldValue: { status: 'ACTIVE' },
+        newValue: { status: 'REVOKED' }
+      }, tx);
+
+      return revokeDevice;
+    });
+
+    return updated;
   }
 }
 
