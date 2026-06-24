@@ -117,7 +117,7 @@ export const deactivateUser = async (req: Request, res: Response, next: NextFunc
   try {
     const userId = req.params.userId as string;
 
-    const result = await AdminService.deactivateUser(userId);
+    const result = await AdminService.deactivateUser(req.user!.userId ,userId);
 
     return res.status(200).json({
         success: true,
@@ -370,7 +370,7 @@ export const dropStudent = async (req: Request, res: Response, next: NextFunctio
     const classId = req.params.classId as string;
     const studentId = req.params.studentId as string;
 
-    const result = await AdminService.dropStudent(classId, studentId);
+    const result = await AdminService.dropStudent(req.user!.userId ,classId, studentId);
 
     return res.status(200).json({
         success: true,
