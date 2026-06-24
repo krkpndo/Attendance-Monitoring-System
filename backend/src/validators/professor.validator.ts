@@ -6,3 +6,9 @@ export const markAttendanceSchema = z.object({
     }),
     remarks: z.string().max(500).optional()
 });
+
+export const openSessionSchema = z.object({
+    classId: z.string().min(1, 'Class ID is required'),
+    scheduleId: z.string().min(1, 'Schedule ID is required'),
+    deviceId: z.string().min(1).optional()
+});

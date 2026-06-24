@@ -105,13 +105,14 @@ export const getClassSchedule = async (req: Request, res: Response, next: NextFu
 // Attendance Sessions
 export const openAttendanceSession = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { classId, scheduleId } = req.body;
+    const { classId, scheduleId, deviceId } = req.body;
 
-    await ProfessorService.openAttendanceSession(req.user!.userId, classId, scheduleId);
+    const session = await ProfessorService.openAttendanceSession(req.user!.userId, classId, scheduleId, deviceId);
 
     return res.status(201).json({
         success: true,
         message: 'Attendance session opened',
+        data: session
     });
 
   } catch (error) {

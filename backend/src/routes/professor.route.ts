@@ -3,7 +3,7 @@ import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as ProfessorController from '../controllers/professor.controller';
 import { profileUpload } from '../config/profile-upload';
 import { validate } from '../middlewares/validation.middleware';
-import { markAttendanceSchema } from '../validators/professor.validator';
+import { markAttendanceSchema, openSessionSchema } from '../validators/professor.validator';
 import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
@@ -22,7 +22,7 @@ router.get('/classes/:classId/session', ProfessorController.getAttendanceSession
 router.get('/classes/:classId/report', ProfessorController.getAttendanceReport);
 
 // Attendance Sessions
-router.post('/sessions', ProfessorController.openAttendanceSession);
+router.post('/sessions', validate(openSessionSchema),ProfessorController.openAttendanceSession);
 router.patch('/sessions/:sessionId/close', ProfessorController.closeAttendanceSession);
 router.patch('/sessions/:sessionId/cancel', ProfessorController.cancelAttendanceSession);
 

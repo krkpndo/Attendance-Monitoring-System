@@ -10,7 +10,8 @@ import './config/prisma';
 import authRoutes from './routes/auth.route';
 import studentRoutes from './routes/student.route';
 import professorRoutes from './routes/professor.route';
-import adminRoutes from './routes/admin.routes';
+import adminRoutes from './routes/admin.route';
+import deviceRoutes from './routes/device.route';
 import { errorHandler, handleMulterError } from './middlewares/error.middleware';
 
 const app = express();
@@ -25,6 +26,7 @@ app.use('/auth', authRoutes);
 app.use('/student', studentRoutes);
 app.use('/professor', professorRoutes);
 app.use('/admin', adminRoutes);
+app.use('/device', deviceRoutes);
 
 
 // Serve uploaded files

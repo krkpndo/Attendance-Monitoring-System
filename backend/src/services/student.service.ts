@@ -7,6 +7,7 @@ import argon2 from 'argon2';
 import { RfidRequestType, RfidRequestStatus } from "@prisma/client";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
 import NotificationService from "./notification.service";
+import { normalizeRfid } from "../utils/rfid_utils";
 
 class StudentService {
     static async getStudentProfile (studentId: string) {
@@ -45,6 +46,8 @@ class StudentService {
     }
 
     static async registerRfid(userId: string, rfidNumber: string) {
+        const rfid = normalizeRfid(rfidNumber);
+
         const student = await prisma.student.findUnique({
             where: { userId }
         });
@@ -54,7 +57,7 @@ class StudentService {
         }
     
         const existingCard = await prisma.rfidCard.findUnique({
-            where: { rfidNumber }
+            where: { rfidNumber: rfid }
         });
     
         if (existingCard) {
@@ -74,7 +77,7 @@ class StudentService {
         return prisma.$transaction(async (tx) => {
 
             const card = await tx.rfidCard.create({
-                data: { rfidNumber, studentId: student.id, status: 'ACTIVE' },
+                data: { rfidNumber: rfid, studentId: student.id, status: 'ACTIVE' },
                 select: { rfidNumber: true, status: true, issuedAt: true }
             });
 

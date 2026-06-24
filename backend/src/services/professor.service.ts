@@ -219,7 +219,7 @@ class ProfessorService {
         return schedules;
     }
 
-    static async openAttendanceSession(userId: string, classId: string, scheduleId: string) {
+    static async openAttendanceSession(userId: string, classId: string, scheduleId: string, deviceId?: string) {
         const classRecord = await prisma.class.findFirst({
             where: { id: classId, professorId: userId }
         });
@@ -244,6 +244,25 @@ class ProfessorService {
             throw new AppError('Schedule not found for this class', 404, 'NOT_FOUND');
         }
 
+        if (deviceId) {
+            const device = await prisma.device.findUnique({
+                where: { id: deviceId },
+                select: { status: true }
+            });
+
+            if (!device || device.status !== 'ACTIVE') {
+                throw new AppError('Device not found or revoked', 404, 'DEVICE_NOT_FOUND');
+            }
+
+            const deviceBusy = await prisma.attendanceSession.findFirst({
+                where: { deviceId, status: 'OPEN' }
+            });
+
+            if (deviceBusy) {
+                throw new AppError('This device is already in use by another open session', 409, 'DEVICE_IN_USE');
+            }
+        }
+
         const session = await prisma.$transaction(async (tx) => {
             const newSession = await tx.attendanceSession.create({
                 data: {
@@ -253,7 +272,8 @@ class ProfessorService {
                     startTime: schedule.startTime,
                     endTime: schedule.endTime,
                     status: 'OPEN',
-                    openedAt: new Date()
+                    openedAt: new Date(),
+                    deviceId: deviceId ?? null
                 }
             });
 
@@ -271,7 +291,21 @@ class ProfessorService {
                     }))
                 });
             }
+
+            if (deviceId) {
+                await AuditService.log({
+                    actorId: userId,
+                    action: 'DEVICE_CLAIMED',
+                    entityType: 'Device',
+                    entityId: deviceId,
+                    newValue: { sessionId: newSession.id, classId }
+                }, tx);
+            }
+
+            return newSession;
         });
+
+        return session;
     }
 
     static async closeAttendanceSession(userId: string, sessionId: string) {
