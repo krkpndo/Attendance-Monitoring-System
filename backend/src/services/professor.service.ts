@@ -292,6 +292,14 @@ class ProfessorService {
                 });
             }
 
+            await AuditService.log({
+                actorId: userId,
+                action: 'SESSION_OPENED',
+                entityType: 'AttendanceSession',
+                entityId: newSession.id,
+                newValue: { classId, scheduleId, deviceId: deviceId ?? null }
+            }, tx);
+
             if (deviceId) {
                 await AuditService.log({
                     actorId: userId,
@@ -333,12 +341,20 @@ class ProfessorService {
             throw new AppError('Session not found', 404, 'NOT_FOUND');
         }
 
-        await prisma.attendanceSession.update({
-            where: { id: sessionId },
-            data: {
-                status: 'CLOSED',
-                closedAt: new Date()
-            },
+        await prisma.$transaction(async (tx) => {
+            await tx.attendanceSession.update({
+                where: { id: sessionId },
+                data: { status:  'CLOSED', closedAt: new Date() }
+            });
+
+            await AuditService.log({
+                actorId: userId,
+                action: 'SESSION_CLOSED',
+                entityType: 'AttendanceSession',
+                entityId: sessionId,
+                oldValue: { status: 'OPEN' },
+                newValue: { status: 'CLOSED' }
+            }, tx);
         });
 
         const absentRecords = await prisma.attendanceRecord.findMany({
@@ -372,13 +388,20 @@ class ProfessorService {
             throw new AppError('Session not found', 404, 'NOT_FOUND');
         }
 
-        await prisma.attendanceSession.update({
-            where: { id: sessionId },
-            data: {
-                status: 'CANCELLED',
-                cancelledBy: userId,
-                cancelledAt: new Date()
-            }
+        await prisma.$transaction(async (tx) => {
+            await tx.attendanceSession.update({
+                where: { id: sessionId },
+                data: { status: 'CANCELLED', cancelledBy: userId, cancelledAt: new Date() }
+            });
+
+            await AuditService.log({
+                actorId: userId,
+                action: 'SESSION_CANCELLED',
+                entityType: 'AttendanceSession',
+                entityId: sessionId,
+                oldValue: { status: session.status },
+                newValue: { status: 'CANCELLED' }
+            }, tx);
         });
     }
 
@@ -457,15 +480,28 @@ class ProfessorService {
         if (!record) {
             throw new AppError('Attendance record not found', 404, 'RECORD_NOT_FOUND');
         }
+
+        const isOverride = record.isManual || record.timeIn !== null;
         
-        await prisma.attendanceRecord.update({
-            where: { id: param.recordId },
-            data: {
-                status: param.data.status as any,
-                isManual: true,
-                recordedBy: param.userId,
-                remarks: param.data.remarks,
-            },
+        await prisma.$transaction(async (tx) => {
+            await tx.attendanceRecord.update({
+                where: { id: param.recordId },
+                data: {
+                    status: param.data.status as any,
+                    isManual: true,
+                    recordedBy: param.userId,
+                    remarks: param.data.remarks
+                }
+            });
+
+            await AuditService.log({
+                actorId: param.userId,
+                action: isOverride ? 'ATTENDANCE_OVERRIDE' : 'MANUAL_ATTENDANCE',
+                entityType: 'AttendanceRecord',
+                entityId: param.recordId,
+                oldValue: { status: record.status, isManual: record.isManual },
+                newValue: { status: param.data.status }
+            }, tx);
         });
 
         if (param.data.status === 'LATE') {
@@ -473,7 +509,7 @@ class ProfessorService {
                 userId: record.studentId,
                 type: 'ATTENDANCE_ALERT',
                 title: 'Marked late',
-                message: `You were marked late fro ${record.session.class.course.courseCode}.`,
+                message: `You were marked late for ${record.session.class.course.courseCode}.`,
                 metadata: { recordId: param.recordId, status: 'LATE' }
             });
         }

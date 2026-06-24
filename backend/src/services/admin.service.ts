@@ -298,7 +298,7 @@ class AdminService {
     return updated;
 }
 
-  static async deactivateUser(userId: string) {
+  static async deactivateUser(actorId: string ,userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -311,16 +311,23 @@ class AdminService {
       throw new AppError('User is already deactivated', 400, 'ALREADY_DEACTIVATED');
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { status: 'INACTIVE' },
-      select: {
-        id: true,
-        username: true,
-        name: true,
-        type: true,
-        status: true,
-      },
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: userId },
+        data: { status: 'INACTIVE' },
+        select: { id: true, username: true, name: true, type: true, status: true }
+      });
+
+      await AuditService.log({
+        actorId,
+        action: 'USER_STATUS_CHANGED',
+        entityType: 'User',
+        entityId: userId,
+        oldValue: { status: user.status },
+        newValue: { status: 'INACTIVE' }
+      }, tx);
+
+      return u;
     });
 
     return updatedUser;
@@ -837,7 +844,7 @@ class AdminService {
     return enrollment;
   }
 
-  static async dropStudent(classId: string, studentId: string) {
+  static async dropStudent(actorId: string ,classId: string, studentId: string) {
     const enrollment = await prisma.classEnrollment.findUnique({
       where: { classId_studentId: { classId, studentId } },
       include: { class: { include: { course: { select: { courseCode: true } } } } }
@@ -851,16 +858,24 @@ class AdminService {
       throw new AppError('Student is already dropped from this class', 400, 'ALREADY_DROPPED');
     }
 
-    const updated = await prisma.classEnrollment.update({
-      where: { id: enrollment.id },
-      data: {
-        status: 'DROPPED',
-        droppedDate: new Date(),
-      },
-      omit: {
-        createdAt: true,
-        updatedAt: true
-      }
+    const updated = await prisma.$transaction(async (tx) => {
+      const dropped = await tx.classEnrollment.update({
+        where: { id: enrollment.id },
+        data: { status: 'DROPPED', droppedDate: new Date() },
+        omit: { createdAt: true, updatedAt: true }
+      });
+
+      await AuditService.log({
+        actorId ,
+        action: 'ENROLLMENT_DROPPED',
+        entityType: 'ClassEnrollment',
+        entityId: enrollment.id,
+        description: `Dropped from ${enrollment.class.course.courseCode}`,
+        oldValue: { status: enrollment.status },
+        newValue: {  status: 'DROPPED'}
+      }, tx);
+
+      return dropped;
     });
 
     await NotificationService.safeCreate({
