@@ -1,0 +1,1 @@
+export const normalizeRfid = (raw: string): string => raw.trim().toUpperCase().replace(/[\s:-]/g, '');
