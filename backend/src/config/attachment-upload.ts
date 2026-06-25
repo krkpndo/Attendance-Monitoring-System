@@ -35,18 +35,6 @@ const fileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterC
         return;
     }
 
-    // Check size limits based on type
-    // Note: multer checks total limit, per-type check happens here
-    if (allowedImages.includes(file.mimetype) && file.size > 5 * 1024 * 1024) {
-        cb(new AppError('Image files must be under 5MB', 400, 'FILE_TOO_LARGE'));
-        return;
-    }
-
-    if (allowedDocs.includes(file.mimetype) && file.size > 10 * 1024 * 1024) {
-        cb(new AppError('PDF files must be under 10MB', 400, 'FILE_TOO_LARGE'));
-        return;
-    }
-
     cb(null, true);
 };
 

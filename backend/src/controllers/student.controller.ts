@@ -208,6 +208,20 @@ export const uploadExcuseAttachment = async (req: Request, res: Response, next: 
             return res.status(400).json({ success: false, message: 'At least one file is required' });
         }
 
+        const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+        const oversizedImage = files.find(
+            (file) => file.mimetype === 'image/jpeg' && file.size > MAX_IMAGE_SIZE
+        );
+
+        if (oversizedImage) {
+            await Promise.all(
+                files.map((file) => fs.promises.unlink(file.path).catch(() => {}))
+            );
+
+            throw new AppError('Image files must be under 5MB', 400, 'FILE_TOO_LARGE');
+        }
+
         const uploadParams: UploadExcuseLetterAttachmentsDto = {
             userId: req.user!.userId,
             excuseId,

@@ -566,14 +566,20 @@ export const rejectRfidRequest = async (req: Request, res: Response, next: NextF
 
 // Devices
 export const registerDevice = async (req: Request, res: Response, next: NextFunction) => {
-  const { label } = req.body;
-  const result = await AdminService.registerDevice(req.user!.userId, label);
+  try {
 
-  return res.status(201).json({
-    success: true,
-    message: 'Device registered',
-    data: result
-  });
+    const { label } = req.body;
+    const result = await AdminService.registerDevice(req.user!.userId, label);
+  
+    return res.status(201).json({
+      success: true,
+      message: 'Device registered',
+      data: result
+    });
+
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getDevices = async (req: Request, res: Response, next: NextFunction) => {
