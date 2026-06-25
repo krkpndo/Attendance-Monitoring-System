@@ -28,7 +28,7 @@ class AdminService {
     const hashedPassword = await argon2.hash(data.username);
 
     if (data.type === 'STUDENT') {
-      console.log(data);
+      
       if (!data.studentData) {
         throw new AppError('Student data is required', 400, 'STUDENT_DATA_REQUIRED');
       }
@@ -47,7 +47,8 @@ class AdminService {
           password: hashedPassword,
           email: data.email,
           name: data.name,
-          type: data.type,
+          type: 'STUDENT',
+          mustChangePassword: true,
           student: {
             create: {
               studentNumber: data.studentData.studentNumber,
@@ -84,6 +85,7 @@ class AdminService {
           email: data.email,
           name: data.name,
           type: 'PROFESSOR',
+          mustChangePassword: true,
           professor: {
             create: {
               employeeNumber: data.professorData.employeeNumber,
@@ -106,6 +108,7 @@ class AdminService {
           email: data.email,
           name: data.name,
           type: 'ADMIN',
+          mustChangePassword: true,
         },
         omit: { password: true }
       });

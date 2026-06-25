@@ -96,3 +96,20 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
         next(error);
     }
 };
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+
+        const { currentPassword, newPassword } = req.body;
+
+        await AuthService.changePassword(req.user!.userId, newPassword, currentPassword);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Password changed successfully'
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};

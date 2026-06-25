@@ -44,6 +44,7 @@ class AuthService {
                 type: user.type,
                 status: user.status,
                 lastLoginAt: updatedUser.lastLoginAt,
+                mustChangePassword: user.mustChangePassword
             }
         };
     }
@@ -153,7 +154,7 @@ class AuthService {
     static async getMe(userId: string): Promise<LoginResponse['user']> {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { id: true, type: true, status: true, lastLoginAt: true }
+            select: { id: true, type: true, status: true, lastLoginAt: true, mustChangePassword: true }
         });
 
         if (!user) {
@@ -219,6 +220,43 @@ class AuthService {
                 where: { userId: reset.userId },
             })
         ]);
+    }
+
+    static async changePassword(userId: string, newPassword: string, currentPassword?: string): Promise<void> {
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { password: true, mustChangePassword: true }
+        });
+
+        if (!user) {
+            throw new AppError('User not found', 404, 'USER_OT_FOUND');
+        }
+
+        if (!user.mustChangePassword) {
+            if (!currentPassword) {
+                throw new AppError('Current password is required', 400, 'CURRENT_PASSWORD_REQUIRED');
+            }
+
+            const validPassword = await argon2.verify(user.password, currentPassword);
+
+            if (!validPassword) {
+                throw new AppError('Current password is incorrect', 401, 'INVALID_CREDENTIALS');
+            }
+        }
+
+        const samePassword = await argon2.verify(user.password, newPassword);
+
+        if (samePassword) {
+            throw new AppError('New password must be different from the current password', 400, 'PASSWORD_UNCHANGED');
+        }
+
+        const hashedPassword = await argon2.hash(newPassword);
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword, mustChangePassword: false }
+        });
     }
 }
 
