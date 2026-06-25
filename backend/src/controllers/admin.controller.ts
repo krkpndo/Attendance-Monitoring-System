@@ -511,12 +511,10 @@ export const getNotifications = async (req: Request, res: Response, next: NextFu
   try {
     const result = await NotificationService.getNotifications(req.user!.userId);
 
-    res.json({ success: true, message: 'Notifications retrieved successfully', data: result });
+    return res.status(200).json({ success: true, message: 'Notifications retrieved successfully', data: result });
+
   } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, message: error.message, code: error.errorCode });
-    }
-    res.status(500).json({ success: false, message: 'Internal server error', code: 'SERVER_ERROR' });
+    next(error);
   }
 };
 
@@ -526,12 +524,10 @@ export const markNotificationAsRead = async (req: Request, res: Response, next: 
 
     const result = await NotificationService.markAsRead(req.user!.userId, notificationId);
 
-    res.json({ success: true, message: 'Notification marked as read', data: result });
+    return res.status(200).json({ success: true, message: 'Notification marked as read', data: result });
+
   } catch (error) {
-    if (error instanceof AppError) {
-      res.status(error.statusCode).json({ success: false, message: error.message, code: error.errorCode });
-    }
-    res.status(500).json({ success: false, message: 'Internal server error', code: 'SERVER_ERROR' });
+    next(error);
   }
 };
 
