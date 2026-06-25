@@ -312,11 +312,14 @@ class AdminService {
     }
 
     const updatedUser = await prisma.$transaction(async (tx) => {
+      
       const u = await tx.user.update({
         where: { id: userId },
         data: { status: 'INACTIVE' },
         select: { id: true, username: true, name: true, type: true, status: true }
       });
+
+      await tx.session.deleteMany({ where: { userId } });
 
       await AuditService.log({
         actorId,

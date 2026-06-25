@@ -123,11 +123,18 @@ class AuthService {
         }
 
         const session = await prisma.session.findUnique({
-            where: { userId: payload.userId }
+            where: { userId: payload.userId },
+            include: { user: { select: { status: true } } }
         });
 
         if (!session || session.tokenHash !== hashToken(refreshToken)) {
             throw new AppError('Session expired. Please log in again.', 401, 'SESSION_INVALID');
+        }
+
+        if (session.user.status === 'INACTIVE') {
+            await prisma.session.delete({ where: { userId: payload.userId } });
+            
+            throw new AppError('Account is currently deactivated', 403, 'ACCOUNT_DEACTIVATED');
         }
 
         const tokens = generateTokenPair(payload.userId, payload.role);
