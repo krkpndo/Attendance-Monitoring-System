@@ -21,5 +21,6 @@ export interface LoginResponse {
         type: UserType;
         status: UserStatus;
         lastLoginAt: Date | null;
+        mustChangePassword: boolean;
     }
 }
