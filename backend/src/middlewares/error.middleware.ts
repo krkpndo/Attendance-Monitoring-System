@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/app_error";
 import multer from "multer";
+import { Prisma } from "@prisma/client";
+import { success } from "zod";
 
 export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof AppError) {
@@ -9,6 +11,42 @@ export const errorHandler = (err: Error, _req: Request, res: Response, _next: Ne
             message: err.message,
             code: err.errorCode
         });
+    }
+
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+
+        switch (err.code) {
+
+            case 'P2002': {
+                
+                const target = err.meta?.target;
+                const fields = Array.isArray(target)
+                    ? target.join(', ')
+                    : typeof target === 'string' ? target: undefined;
+
+                return res.status(409).json({
+                    success: false,
+                    message: fields
+                        ? `A record with this ${fields} already exists`
+                        : 'A record with these details already exists',
+                    code: 'DUPLICATE_ENTRY'
+                });
+            }
+
+            case 'P2003':
+                return res.status(409).json({
+                    success: false,
+                    message: 'Operation failed because a related record still exists',
+                    code: 'FOREIGN_KEY_CONSTRAINT'
+                });
+
+            case 'P2025':
+                    return res.status(404).json({
+                        success: false,
+                        message: 'The requested record was not found',
+                        code: 'NOT_FOUND'
+                    });
+        }
     }
 
     console.error(err);
