@@ -1,7 +1,7 @@
 import prisma from '../config/prisma';
 import argon2 from 'argon2';
 import { AppError } from '../utils/app_error';
-import { CreateClassDto, CreateCourseDto, CreateUserDto, GetAttendanceRecordsDto, GetClassesFilter, SetClassSchedultDto, StudentSearchFilter, UpdateClassDto, UpdateCourseDto, UpdateProfessorProfileDto, UpdateStudentProfileDto, UpdateUserProfileDto } from '../interfaces/admin.interface';
+import { CreateClassDto, CreateCourseDto, CreateUserDto, GetAttendanceRecordsDto, GetClassesFilter, SetClassScheduleDto, StudentSearchFilter, UpdateClassDto, UpdateCourseDto, UpdateProfessorProfileDto, UpdateStudentProfileDto, UpdateUserProfileDto } from '../interfaces/admin.interface';
 import { ExcuseStatus, Prisma, RfidRequestStatus } from '@prisma/client';
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
@@ -736,7 +736,7 @@ class AdminService {
     return updated;
   }
 
-  static async setClassSchedule(classId: string, schedules: SetClassSchedultDto[]) {
+  static async setClassSchedule(classId: string, schedules: SetClassScheduleDto[]) {
     const classRecord = await prisma.class.findUnique({
       where: { id: classId },
       include: { course: { select: { courseCode: true } } }
@@ -746,25 +746,35 @@ class AdminService {
       throw new AppError('Class not found', 404, 'CLASS_NOT_FOUND');
     }
 
-    await prisma.classSchedule.deleteMany({
-      where: { classId },
+    const sessionCount = await prisma.attendanceSession.count({
+      where: { classId }
     });
 
-    await prisma.classSchedule.createMany({
-      data: schedules.map((s) => ({
-        classId,
-        dayOfWeek: s.dayOfWeek,
-        startTime: new Date(`1970-01-01T${s.startTime}`),
-        endTime: new Date(`1970-01-01T${s.endTime}`),
-      })),
-    });
+    if (sessionCount > 0) {
+      throw new AppError('Cannot change the schedule after attendance session exists for this class', 409, 'SCHEDULE_HAS_SESSIONS');
+    }
 
-    const newSchedules = await prisma.classSchedule.findMany({
-      where: { classId },
-      omit: {
-        createdAt: true,
-        updatedAt: true
-      }
+    const newSchedules = await prisma.$transaction(async (tx) => {
+      await tx.classSchedule.deleteMany({
+        where: { classId }
+      });
+
+      await tx.classSchedule.createMany({
+        data: schedules.map((s) => ({
+          classId,
+          dayOfWeek: s.dayOfWeek,
+          startTime: new Date(`1970-01-01T${s.startTime}`),
+          endTime: new Date(`1970-01-01T${s.endTime}`)
+        }))
+      });
+
+      return tx.classSchedule.findMany({
+        where: { classId },
+        omit: {
+          createdAt: true,
+          updatedAt: true
+        }
+      });
     });
 
     await NotificationService.safeCreate({
@@ -1258,7 +1268,7 @@ class AdminService {
         description: reason,
         oldValue: { status: 'PENDING' },
         newValue: { status: 'REJECTED' }
-      });
+      }, tx);
 
       return updated;
     });

@@ -85,7 +85,7 @@ export interface UpdateClassDto {
   status?: ClassStatus;
 }
 
-export interface SetClassSchedultDto {
+export interface SetClassScheduleDto {
   dayOfWeek: number[];
   startTime: string;
   endTime: string;
