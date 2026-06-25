@@ -3,7 +3,7 @@ import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as ProfessorController from '../controllers/professor.controller';
 import { profileUpload } from '../config/profile-upload';
 import { validate } from '../middlewares/validation.middleware';
-import { markAttendanceSchema, openSessionSchema } from '../validators/professor.validator';
+import { markAttendanceSchema, openSessionSchema } from '../validators/professor.validators';
 import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();

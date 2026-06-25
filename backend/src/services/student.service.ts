@@ -400,14 +400,15 @@ class StudentService {
             throw new AppError('Excuse letters can only be submitted for ABSENT or LATE records', 400, 'INVALID_ATTENDANCE_STATUS');
         }
     
-        const existingExcuses = await prisma.excuseDate.findMany({
+        const blockingExcuses = await prisma.excuseDate.findMany({
             where: {
-                attendanceId: { in: data.attendanceRecordIds }
+                attendanceId: { in: data.attendanceRecordIds },
+                status: { in: ['PENDING', 'APPROVED'] }
             }
         });
-    
-        if (existingExcuses.length > 0) {
-            throw new AppError('Unable to submit request. Pending excuse letter found', 400, 'BAD_REQUEST');
+
+        if (blockingExcuses.length > 0) {
+            throw new AppError('An excuse for one or more of these dates is already pending or approved', 400, 'EXCUSE_ALREADY_EXISTS');
         }
     
         const excuseLetter = await prisma.excuseLetter.create({

@@ -1360,7 +1360,7 @@ class AdminService {
 
     const updated = await prisma.$transaction(async (tx) => {
 
-      const revokeDevice = await tx.device.update({
+      const revokedDevice = await tx.device.update({
         where: { id: deviceId },
         data: { status: 'REVOKED', revokedAt: new Date(), revokedReason },
         omit: { tokenHash: true }
@@ -1376,7 +1376,7 @@ class AdminService {
         newValue: { status: 'REVOKED' }
       }, tx);
 
-      return revokeDevice;
+      return revokedDevice;
     });
 
     return updated;

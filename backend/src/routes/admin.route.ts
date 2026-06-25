@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validator';
+import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validators';
 import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();

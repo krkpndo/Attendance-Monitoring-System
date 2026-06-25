@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticateDevice } from "../middlewares/auth.middleware";
-import { tapSchema } from "../validators/device.validator";
+import { tapSchema } from "../validators/device.validators";
 import * as DeviceController from '../controllers/device.controller';
 import { validate } from "../middlewares/validation.middleware";
 
