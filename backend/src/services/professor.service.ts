@@ -228,14 +228,6 @@ class ProfessorService {
             throw new AppError('Class not found', 404, 'NOT_FOUND');
         }
 
-        const existingSession = await prisma.attendanceSession.findFirst({
-            where: { classId, status: 'OPEN' }
-        });
-
-        if (existingSession) {
-            throw new AppError('Attendance session is already open for this class', 400, 'INVALID_REQUEST');
-        }
-
         const schedule = await prisma.classSchedule.findFirst({
             where: { id: scheduleId, classId }
         });
@@ -253,17 +245,34 @@ class ProfessorService {
             if (!device || device.status !== 'ACTIVE') {
                 throw new AppError('Device not found or revoked', 404, 'DEVICE_NOT_FOUND');
             }
-
-            const deviceBusy = await prisma.attendanceSession.findFirst({
-                where: { deviceId, status: 'OPEN' }
-            });
-
-            if (deviceBusy) {
-                throw new AppError('This device is already in use by another open session', 409, 'DEVICE_IN_USE');
-            }
         }
 
         const session = await prisma.$transaction(async (tx) => {
+
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(1, hashText(${classId}))`;
+
+            if (deviceId) {
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(2, hashText($deviceId))`;
+            }
+
+            const existingSession = await prisma.attendanceSession.findFirst({
+                where: { classId, status: 'OPEN' }
+            });
+    
+            if (existingSession) {
+                throw new AppError('Attendance session is already open for this class', 400, 'INVALID_REQUEST');
+            }
+
+            if (deviceId) {
+                const deviceBusy = await tx.attendanceSession.findFirst({
+                    where: { deviceId, status: 'OPEN' }
+                });
+
+                if (deviceBusy) {
+                    throw new AppError('This device is already in use by another open session', 409, 'DEVICE_IN_USE');
+                }
+            }
+
             const newSession = await tx.attendanceSession.create({
                 data: {
                     classId,
@@ -487,7 +496,7 @@ class ProfessorService {
             await tx.attendanceRecord.update({
                 where: { id: param.recordId },
                 data: {
-                    status: param.data.status as any,
+                    status: param.data.status,
                     isManual: true,
                     recordedBy: param.userId,
                     remarks: param.data.remarks
