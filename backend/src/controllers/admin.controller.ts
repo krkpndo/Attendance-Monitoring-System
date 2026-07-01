@@ -352,7 +352,7 @@ export const enrollStudent = async (req: Request, res: Response, next: NextFunct
     const classId = req.params.classId as string;
     const { studentId } = req.body;
 
-    const result = await AdminService.enrollStudent(classId, studentId);
+    const result = await AdminService.enrollStudent(req.user!.userId, classId, studentId);
 
     return res.status(201).json({
         success: true,

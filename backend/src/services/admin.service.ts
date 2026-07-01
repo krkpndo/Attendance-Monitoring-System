@@ -6,6 +6,7 @@ import { AuditAction, ExcuseStatus, Prisma, RfidRequestStatus, UserType } from '
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
 import { generateDeviceToken, hashToken } from '../utils/token_utils';
+import { create } from 'node:domain';
 
 class AdminService {
 
@@ -788,7 +789,7 @@ class AdminService {
   }
 
   // Enrollment Management
-  static async enrollStudent(classId: string, studentId: string) {
+  static async enrollStudent(actorId: string, classId: string, studentId: string) {
     const classRecord = await prisma.class.findUnique({
       where: { id: classId },
       include: { course: { select: { courseCode: true } } }
@@ -815,23 +816,36 @@ class AdminService {
         throw new AppError('Student is already enrolled in this class', 400, 'ALREADY_ENROLLED');
       }
 
-      const reEnrolled = await prisma.classEnrollment.update({
-        where: { id: existingEnrollment.id },
-        data: {
-          status: 'ENROLLED',
-          droppedDate: null,
-          enrollmentDate: new Date(),
-        },
-        include: {
-          student: { select: { name: true, id: true } },
-          class: { include: { course: { select: { courseCode: true, courseName: true } } } }
-        },
-        omit: {
-          classId: true,
-          studentId: true,
-          createdAt: true,
-          updatedAt: true
-        }
+      const reEnrolled = await prisma.$transaction(async (tx) => {
+
+        const updated = await tx.classEnrollment.update({
+          where: { id: existingEnrollment.id },
+          data: {
+            status: 'ENROLLED',
+            droppedDate: null,
+            enrollmentDate: new Date()
+          },
+          include: {
+            student: { select: { name: true, id: true } },
+            class: { include: { course: { select: { courseCode: true, courseName: true } } } }
+          },
+          omit: {
+            classId: true,
+            studentId: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
+
+        await AuditService.log({
+          actorId,
+          action: 'ENROLLMENT_ADDED',
+          entityType: 'ClassEnrollment',
+          entityId: existingEnrollment.id,
+          description: `Re-enrolled in ${classRecord.course.courseCode}`,
+          oldValue: { status: existingEnrollment.status },
+          newValue: { status: 'ENROLLED' }
+        });
       });
 
       await NotificationService.safeCreate({
@@ -845,18 +859,32 @@ class AdminService {
       return reEnrolled;
     }
 
-    const enrollment = await prisma.classEnrollment.create({
-      data: { classId, studentId },
-      include: {
-        student: { select: { name: true, id: true } },
-        class: { include: { course: { select: { courseCode: true, courseName: true } } } },
-      },
-      omit: {
-        classId: true,
-        studentId: true,
-        createdAt: true,
-        updatedAt: true
-      }
+    const enrollment = await prisma.$transaction(async (tx) => {
+      
+      const created = await tx.classEnrollment.create({
+        data: { classId, studentId },
+        include: {
+          student: { select: { name: true, id: true } },
+          class: { include: { course: { select: { courseCode: true, courseName: true } } } },
+        },
+        omit: {
+          classId: true,
+          studentId: true,
+          createdAt: true,
+          updatedAt: true
+        }
+      });
+
+      await AuditService.log({
+        actorId,
+        action: 'ENROLLMENT_ADDED',
+        entityType: 'ClassEnrollment',
+        entityId: created.id,
+        description: `Enrolled in ${classRecord.course.courseCode}`,
+        newValue: { classId, studentId, status: 'ENROLLED' }
+      }, tx);
+
+      return created;
     });
 
     await NotificationService.safeCreate({
