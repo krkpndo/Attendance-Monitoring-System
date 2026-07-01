@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import AdminService from '../services/admin.service';
 import NotificationService from '../services/notification.service';
 import { AppError } from '../utils/app_error';
-import { ClassStatus, ExcuseStatus, RfidRequestStatus, Semester, VerificationStatus } from '@prisma/client';
+import { AuditAction, ClassStatus, ExcuseStatus, RfidRequestStatus, Semester, UserType, VerificationStatus } from '@prisma/client';
 
 // User Management
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -26,7 +26,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 
 export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
   try {
-      const type = req.query.type as string | undefined;
+      const type = req.query.type as UserType | undefined;
       const search = req.query.search as string | undefined;
 
       const result = await AdminService.getUsers(type, search);
@@ -490,7 +490,7 @@ export const getAuditLogs = async (req: Request, res: Response, next: NextFuncti
 
     const result = await AdminService.getAuditLogs({
       userId: userId as string | undefined,
-      action: action as string | undefined,
+      action: action as AuditAction | undefined,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
     });

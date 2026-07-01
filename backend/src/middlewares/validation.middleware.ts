@@ -7,6 +7,13 @@ export const validate = (schema: ZodType, source: 'body' | 'query' | 'params' = 
             const parsed = schema.parse(req[source]);
             if (source === 'body') {
                 req.body = parsed;
+            } else if (source === 'query') {
+                Object.defineProperty(req, 'query', {
+                    value: parsed,
+                    writable: true,
+                    configurable: true,
+                    enumerable: true
+                });
             }
             next();
         } catch (error) {

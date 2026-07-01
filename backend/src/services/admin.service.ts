@@ -2,7 +2,7 @@ import prisma from '../config/prisma';
 import argon2 from 'argon2';
 import { AppError } from '../utils/app_error';
 import { CreateClassDto, CreateCourseDto, CreateUserDto, GetAttendanceRecordsDto, GetClassesFilter, SetClassScheduleDto, StudentSearchFilter, UpdateClassDto, UpdateCourseDto, UpdateProfessorProfileDto, UpdateStudentProfileDto, UpdateUserProfileDto } from '../interfaces/admin.interface';
-import { ExcuseStatus, Prisma, RfidRequestStatus } from '@prisma/client';
+import { AuditAction, ExcuseStatus, Prisma, RfidRequestStatus, UserType } from '@prisma/client';
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
 import { generateDeviceToken, hashToken } from '../utils/token_utils';
@@ -119,10 +119,10 @@ class AdminService {
     throw new AppError('Invalid user type', 400, 'INVALID_USER_TYPE');
   }
 
-  static async getUsers(type?: string, search?: string) {
+  static async getUsers(type?: UserType, search?: string) {
     const users = await prisma.user.findMany({
         where: {
-            ...(type && { type: type as any }),
+            ...(type && { type: type }),
             ...(search && {
                 OR: [
                     { name: { contains: search, mode: 'insensitive' } },
@@ -574,7 +574,7 @@ class AdminService {
         professorId: data.professorId,
         section: data.section,
         schoolYear: data.schoolYear,
-        semester: data.semester as any,
+        semester: data.semester,
         room: data.room,
       },
       include: {
@@ -611,8 +611,8 @@ class AdminService {
         ...(filters?.courseId && { courseId: filters.courseId }),
         ...(filters?.professorId && { professorId: filters.professorId }),
         ...(filters?.schoolYear && { schoolYear: filters.schoolYear }),
-        ...(filters?.semester && { semester: filters.semester as any }),
-        ...(filters?.status && { status: filters.status as any }),
+        ...(filters?.semester && { semester: filters.semester }),
+        ...(filters?.status && { status: filters.status }),
       },
       include: {
         course: { select: { courseCode: true, courseName: true, id: true } },
@@ -704,7 +704,7 @@ class AdminService {
         professorId: data.professorId,
         section: data.section,
         room: data.room,
-        status: data.status as any,
+        status: data.status,
       },
       include: {
         course: {
@@ -822,6 +822,16 @@ class AdminService {
           droppedDate: null,
           enrollmentDate: new Date(),
         },
+        include: {
+          student: { select: { name: true, id: true } },
+          class: { include: { course: { select: { courseCode: true, courseName: true } } } }
+        },
+        omit: {
+          classId: true,
+          studentId: true,
+          createdAt: true,
+          updatedAt: true
+        }
       });
 
       await NotificationService.safeCreate({
@@ -1195,11 +1205,11 @@ class AdminService {
   }
 
   // Audit Logs
-  static async getAuditLogs(filters?: { userId?: string; action?: string; startDate?: Date; endDate?: Date }) {
+  static async getAuditLogs(filters?: { userId?: string; action?: AuditAction; startDate?: Date; endDate?: Date }) {
     const logs = await prisma.auditLog.findMany({
       where: {
         ...(filters?.userId && { userId: filters.userId }),
-        ...(filters?.action && { action: filters.action as any }),
+        ...(filters?.action && { action: filters.action }),
         ...(filters?.startDate && filters?.endDate && {
           createdAt: {
             gte: filters.startDate,
