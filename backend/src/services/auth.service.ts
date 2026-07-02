@@ -259,10 +259,15 @@ class AuthService {
 
         const hashedPassword = await argon2.hash(newPassword);
 
-        await prisma.user.update({
-            where: { id: userId },
-            data: { password: hashedPassword, mustChangePassword: false }
-        });
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: userId },
+                data: { password: hashedPassword, mustChangePassword: false }
+            }),
+            prisma.session.deleteMany({
+                where: { userId }
+            })
+        ]);
     }
 }
 

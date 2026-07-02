@@ -66,18 +66,17 @@ class StudentService {
                 : new AppError('This RFID card is already in use', 400, 'RFID_IN_USE');
         }
 
-        const activeCard = await prisma.rfidCard.findFirst({
-            where: { studentId: student.id, status: 'ACTIVE' }
-        });
-
-        if (activeCard) {
-            throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_REGISTERED');
-        }
-
         return prisma.$transaction(async (tx) => {
             await tx.$executeRaw`SELECT pg_advisory_xact_lock(3, hashText(${student.id}))`;
-            
 
+            const activeCard = await tx.rfidCard.findFirst({
+                where: { studentId: student.id, status: 'ACTIVE' }
+            });
+
+            if (activeCard) {
+                throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_REGISTERED');
+            }
+            
             const card = await tx.rfidCard.create({
                 data: { rfidNumber: rfid, studentId: student.id, status: 'ACTIVE' },
                 select: { rfidNumber: true, status: true, issuedAt: true }
