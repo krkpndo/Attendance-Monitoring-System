@@ -75,6 +75,8 @@ class StudentService {
         }
 
         return prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(3, hashText(${student.id}))`;
+            
 
             const card = await tx.rfidCard.create({
                 data: { rfidNumber: rfid, studentId: student.id, status: 'ACTIVE' },

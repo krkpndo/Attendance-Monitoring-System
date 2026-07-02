@@ -132,6 +132,12 @@ class AuthService {
             throw new AppError('Session expired. Please log in again.', 401, 'SESSION_INVALID');
         }
 
+        if (session.tokenHash !== hashToken(refreshToken)) {
+            await prisma.session.delete({ where: { userId: payload.userId } });
+
+            throw new AppError('Session invalidated for security reasons. Please log in again.', 401, 'TOKEN_REUSE_DETECTED');
+        }
+
         if (session.user.status === 'INACTIVE') {
             await prisma.session.delete({ where: { userId: payload.userId } });
             
