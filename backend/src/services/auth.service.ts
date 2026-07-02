@@ -230,7 +230,7 @@ class AuthService {
         });
 
         if (!user) {
-            throw new AppError('User not found', 404, 'USER_OT_FOUND');
+            throw new AppError('User not found', 404, 'USER_NOT_FOUND');
         }
 
         if (!user.mustChangePassword) {

@@ -3,7 +3,7 @@ import * as StudentController from '../controllers/student.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { excuseUpload } from '../config/attachment-upload';
 import { validate } from '../middlewares/validation.middleware';
-import { getAbsencesQuerySchema, registerRfidSchema, studentUpdateProfileSchema, submitExcuseLetterSchema, submitRfidRequestSchema } from '../validators/student.validators';
+import { getAbsencesQuerySchema, getStudentAttendanceQuerySchema, registerRfidSchema, studentUpdateProfileSchema, submitExcuseLetterSchema, submitRfidRequestSchema } from '../validators/student.validators';
 import { profileUpload } from '../config/profile-upload';
 
 const router = Router();
@@ -17,7 +17,7 @@ router.patch('/profile', profileUpload.single('profileImage'), validate(studentU
 // Classes
 router.get('/classes', StudentController.getClasses);
 router.get('/classes/schedule', StudentController.getClassSchedule);
-router.get('/attendance', StudentController.getAttendance);
+router.get('/attendance', validate(getStudentAttendanceQuerySchema, 'query'), StudentController.getAttendance);
 router.get('/attendance/summary', StudentController.getAttendanceSummary);
 router.get('/attendance/absences', validate(getAbsencesQuerySchema, 'query'), StudentController.getAbsencesByDateRange);
 

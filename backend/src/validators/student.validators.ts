@@ -32,3 +32,11 @@ export const getAbsencesQuerySchema = z.object({
     startDate: z.string().min(1, 'Start date is required'),
     endDate: z.string().min(1, 'End date is required')
 });
+
+const attendanceDateString = z.string().refine((value) => !Number.isNaN(Date.parse(value)), 'Invalid date format');
+
+export const getStudentAttendanceQuerySchema = z.object({
+    classId: z.uuid('Invalid class ID').optional(),
+    startDate: attendanceDateString.optional(),
+    endDate: attendanceDateString.optional()
+}).refine((data) => (data.startDate === undefined) === (data.endDate === undefined), { message: 'Start date and end date must be provided together', path: ['startDate'] });

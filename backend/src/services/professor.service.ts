@@ -7,6 +7,7 @@ import argon2 from 'argon2';
 import AuditService from "./audit.service";
 import NotificationService from "./notification.service";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
+import { Prisma } from "@prisma/client";
 
 class ProfessorService {
     static async getProfessorProfile(userId: string) {
@@ -49,7 +50,7 @@ class ProfessorService {
         });
     
         if (!student) {
-            throw new AppError('Student profile not found', 404, 'NOT_FOUND');
+            throw new AppError('Professor profile not found', 404, 'NOT_FOUND');
         }
 
         if (!data.password) {
@@ -80,14 +81,7 @@ class ProfessorService {
             }
         }
 
-        if (data.profileImage && student.user.profileImage) {
-            const oldPath = path.join(process.cwd(), student.user.profileImage);
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
-        }
-
-        const updateData: any = {
+        const updateData: Prisma.UserUpdateInput = {
             name: data.name,
             email: data.email,
             username: data.username,
@@ -111,6 +105,13 @@ class ProfessorService {
                 profileImage: true
             }
         });
+
+        if (data.profileImage && student.user.profileImage) {
+            const oldPath = path.join(process.cwd(), student.user.profileImage);
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+        }
     }
 
     static async getAssignedClasses(userId: string) {

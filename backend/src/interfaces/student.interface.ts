@@ -23,7 +23,7 @@ export interface SubmitExcuseLetterDto {
 
 export interface StudentAttendanceDto {
     userId: string;
-    classId: string;
+    classId?: string;
     startDate?: Date;
     endDate?: Date;
 }
