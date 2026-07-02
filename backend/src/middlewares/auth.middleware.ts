@@ -13,6 +13,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return res.status(401).json({
         success: false,
         message: "Access denied. No token provided",
+        code: 'NO_TOKEN'
       });
     }
   
@@ -37,14 +38,16 @@ export const authorize = (...roles: UserType[]) => {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: 'Authentication required'
+        message: 'Authentication required',
+        code: 'AUTH_REQUIRED'
       });
     }
 
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: 'Unauthorized'
+        message: 'Unauthorized',
+        code: 'FORBIDDEN'
       });
     }
 

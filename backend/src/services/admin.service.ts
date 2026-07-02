@@ -6,7 +6,6 @@ import { AuditAction, ExcuseStatus, Prisma, RfidRequestStatus, UserType } from '
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
 import { generateDeviceToken, hashToken } from '../utils/token_utils';
-import { create } from 'node:domain';
 
 class AdminService {
 
@@ -1166,7 +1165,7 @@ class AdminService {
     data: { status: Extract<ExcuseStatus, 'APPROVED' | 'REJECTED'>; rejectionReason?: string }
   ) {
     if (data.status === 'REJECTED' && !data.rejectionReason) {
-      throw new AppError('Rejecton reason is required', 400, 'REJECTION_REASON_REQUIRED');
+      throw new AppError('Rejection reason is required', 400, 'REJECTION_REASON_REQUIRED');
     };
 
     const excuseLetter = await prisma.excuseLetter.findUnique({
@@ -1284,7 +1283,7 @@ class AdminService {
     }
 
     if (request.status !== 'PENDING') {
-      throw new AppError('This request has already been processd', 400, 'RFID_REQUEST_ALREADY_PROCESSED');
+      throw new AppError('This request has already been processed', 400, 'RFID_REQUEST_ALREADY_PROCESSED');
     }
 
     const updatedRequest = await prisma.$transaction(async (tx) => {

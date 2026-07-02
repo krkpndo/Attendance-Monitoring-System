@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { StudentAbsencesDto, StudentAttendanceDto, StudentUpdateProfileDto, SubmitExcuseLetterDto, UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
 import argon2 from 'argon2';
-import { RfidRequestType, RfidRequestStatus } from "@prisma/client";
+import { RfidRequestType, RfidRequestStatus, Prisma } from "@prisma/client";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
 import NotificationService from "./notification.service";
 import { normalizeRfid } from "../utils/rfid_utils";
@@ -135,14 +135,7 @@ class StudentService {
             }
         }
 
-        if (data.profileImage && student.user.profileImage) {
-            const oldPath = path.join(process.cwd(), student.user.profileImage);
-            if (fs.existsSync(oldPath)) {
-                fs.unlinkSync(oldPath);
-            }
-        }
-
-        const updateData: any = {
+        const updateData: Prisma.UserUpdateInput = {
             name: data.name,
             email: data.email,
             username: data.username,
@@ -153,6 +146,13 @@ class StudentService {
             where: { id: userId },
             data: updateData
         });
+
+        if (data.profileImage && student.user.profileImage) {
+            const oldPath = path.join(process.cwd(), student.user.profileImage);
+            if (fs.existsSync(oldPath)) {
+                fs.unlinkSync(oldPath);
+            }
+        }
     }
 
     static async getStudentClasses (studentId: string) {
@@ -244,18 +244,20 @@ class StudentService {
     }
 
     static async getStudentAttendance(param: StudentAttendanceDto) {
+        const sessionFilter: Prisma.AttendanceSessionWhereInput = {};
+
+        if (param.classId) {
+            sessionFilter.classId = param.classId;
+        }
+
+        if (param.startDate && param.endDate) {
+            sessionFilter.sessionDate = { gte: param.startDate, lte: param.endDate };
+        }
+
         const record = await prisma.attendanceRecord.findMany({
             where: {
                 studentId: param.userId,
-                ...(param.classId && { session: { classId: String(param.classId) } }),
-                ...(param.startDate && param.endDate && {
-                    session: {
-                        sessionDate: {
-                            gte: new Date(String(param.startDate)),
-                            lte: new Date(String(param.endDate))
-                        }
-                    }
-                })
+                ...(Object.keys(sessionFilter).length > 0 && { session: sessionFilter })
             },
             include: {
                 session: {
