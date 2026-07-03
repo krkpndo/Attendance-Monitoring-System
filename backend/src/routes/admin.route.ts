@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema } from '../validators/admin.validators';
+import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema, updateProfessorSchema, updateStudentSchema, updateUserSchema } from '../validators/admin.validators';
 import { reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
@@ -13,10 +13,10 @@ router.use(authenticate, authorize('ADMIN'));
 router.post('/users/create', validate(createUserSchema), AdminController.createUser);
 router.get('/users', validate(getUsersQuerySchema, 'query'), AdminController.getUsers);
 router.get('/users/:userId', AdminController.getUserDetail);
-router.patch('/users/:userId', AdminController.updateUser);
+router.patch('/users/:userId', validate(updateUserSchema), AdminController.updateUser);
 router.patch('/users/:userId/deactivate', AdminController.deactivateUser);
-router.patch('/users/students/:userId', AdminController.updateStudent);
-router.patch('/users/professors/:userId', AdminController.updateProfessor);
+router.patch('/users/students/:userId', validate(updateStudentSchema), AdminController.updateStudent);
+router.patch('/users/professors/:userId', validate(updateProfessorSchema), AdminController.updateProfessor);
 
 // Student Management
 router.get('/students', validate(getStudentsQuerySchema, 'query'), AdminController.getStudents);

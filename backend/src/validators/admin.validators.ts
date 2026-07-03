@@ -126,6 +126,27 @@ export const createUserSchema = z.object({
     }).optional()
 });
 
+export const updateUserSchema = z.object({
+    name: z.string().min(1).max(50).optional(),
+    email: z.email('Invalid email format').max(50).optional(),
+    username: z.string().min(5, 'Username must be at least 5 characters').max(50).optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional()
+});
+
+export const updateStudentSchema = z.object({
+    studentNumber: z.string().min(1, 'Student number is required').optional(),
+    yearLevel: z.number().int().min(1).max(6).optional(),
+    program: z.string().min(1, 'Program is required').optional(),
+    section: z.string().min(1, 'Section is required').optional(),
+    department: z.string().optional()
+});
+
+export const updateProfessorSchema = z.object({
+    employeeNumber: z.string().min(1, 'Employee number is required').optional(),
+    department: z.string().min(1, 'Department is required').optional(),
+    position: z.string().min(1, 'Position is required').optional()
+});
+
 export const enrollStudentSchema = z.object({
     studentId: z.uuid('Invalid student ID')
 });
