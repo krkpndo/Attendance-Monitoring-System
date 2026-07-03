@@ -403,31 +403,33 @@ class StudentService {
             throw new AppError('Excuse letters can only be submitted for ABSENT or LATE records', 400, 'INVALID_ATTENDANCE_STATUS');
         }
     
-        const blockingExcuses = await prisma.excuseDate.findMany({
-            where: {
-                attendanceId: { in: data.attendanceRecordIds },
-                status: { in: ['PENDING', 'APPROVED'] }
-            }
-        });
+        const excuseLetter = await prisma.$transaction(async (tx) => {
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(4, hashtext(${studentId}))`;
 
-        if (blockingExcuses.length > 0) {
-            throw new AppError('An excuse for one or more of these dates is already pending or approved', 400, 'EXCUSE_ALREADY_EXISTS');
-        }
-    
-        const excuseLetter = await prisma.excuseLetter.create({
-            data: {
-                studentId,
-                excuseType: data.excuseType,
-                description: data.description,
-                excuseDates: {
-                    create: data.attendanceRecordIds.map((attendanceId) => ({
-                        attendanceId
-                    })),
-                },
-            },
-            include: {
-                excuseDates: { include: { attendanceRecord: true } }
+            const blockingExcuses = await tx.excuseDate.findMany({
+                where: {
+                    attendanceId: { in: data.attendanceRecordIds },
+                    status: { in: ['PENDING', 'APPROVED'] }
+                }
+            });
+
+            if (blockingExcuses.length > 0) {
+                throw new AppError('An excuse for these dates is already pending or approved', 400, 'EXCUSE_ALREADY_EXISTS');
             }
+
+            return tx.excuseLetter.create({
+                data: {
+                    studentId,
+                    excuseType: data.excuseType,
+                    description: data.description,
+                    excuseDates: {
+                        create: data.attendanceRecordIds.map((attendanceId) => ({attendanceId}))
+                    },
+                },
+                include: {
+                    excuseDates: { include: { attendanceRecord: true } }
+                }
+            });
         });
     
         const affectedClasses = await prisma.attendanceRecord.findMany({

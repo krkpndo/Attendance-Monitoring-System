@@ -72,10 +72,25 @@ class AttendanceEngine {
         const now = new Date();
         const status = now <= cutoff ? 'PRESENT' : 'LATE';
 
-        const updated = await prisma.attendanceRecord.update({
-            where: { id: record.id},
+        const result = await prisma.attendanceRecord.updateMany({
+            where: { id: record.id, timeIn: null, isManual: false},
             data: { timeIn: now, status }
         });
+
+        if (result.count === 0) {
+            const current = await prisma.attendanceRecord.findUnique({
+                where: { id: record.id },
+                select: { status: true, timeIn: true }
+            });
+
+            return {
+                outcome: 'ALREADY_RECORDED' as const,
+                studentName,
+                courseCode,
+                status: current?.status ?? record.status,
+                timeIn: current?.timeIn ?? record.timeIn
+            };
+        }
 
         if (status === 'LATE') {
             await NotificationService.safeCreate({
@@ -91,8 +106,8 @@ class AttendanceEngine {
             outcome: 'RECORDED' as const,
             studentName,
             courseCode,
-            status: updated.status,
-            timeIn: updated.timeIn
+            status,
+            timeIn: now
         };
     }
 }
