@@ -6,11 +6,12 @@ import { AuditAction, ExcuseStatus, Prisma, RfidRequestStatus, UserType } from '
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
 import { generateDeviceToken, hashToken } from '../utils/token_utils';
+import { create } from 'node:domain';
 
 class AdminService {
 
   // User Management
-  static async createUser(data: CreateUserDto) {
+  static async createUser(actorId: string, data: CreateUserDto) {
     
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -41,28 +42,44 @@ class AdminService {
         throw new AppError('Student number already exists', 400, 'STUDENT_NUMBER_EXISTS');
       }
 
-      const user = await prisma.user.create({
-        data: {
-          username: data.username,
-          password: hashedPassword,
-          email: data.email,
-          name: data.name,
-          type: 'STUDENT',
-          mustChangePassword: true,
-          student: {
-            create: {
-              studentNumber: data.studentData.studentNumber,
-              yearLevel: data.studentData.yearLevel,
-              program: data.studentData.program,
-              section: data.studentData.section,
-              department: data.studentData.department,
+      const studentData = data.studentData;
+
+      const user = await prisma.$transaction(async (tx) => {
+
+        const created = await tx.user.create({
+          data: {
+            username: data.username,
+            password: hashedPassword,
+            email: data.email,
+            name: data.name,
+            type: 'STUDENT',
+            mustChangePassword: true,
+            student: {
+              create: {
+                studentNumber: studentData.studentNumber,
+                yearLevel: studentData.yearLevel,
+                program: studentData.program,
+                section: studentData.section,
+                department: studentData.department,
+              },
             },
           },
-        },
-        omit: { password: true }
-      });
+          omit: { password: true }
+        });
 
-      return user;
+        await AuditService.log({
+          actorId,
+          action: 'USER_CREATED',
+          entityType: 'User',
+          entityId: created.id,
+          description: `Created STUDENT account ${created.username}`,
+          newValue: { type: created.type, username: created.username }
+        }, tx);
+  
+        return create;
+        });
+
+        return user;
     }
 
     if (data.type === 'PROFESSOR') {
@@ -78,39 +95,69 @@ class AdminService {
         throw new AppError('Employee number already exists', 400, 'EMPLOYEE_NUMBER_EXISTS');
       }
 
-      const user = await prisma.user.create({
-        data: {
-          username: data.username,
-          password: hashedPassword,
-          email: data.email,
-          name: data.name,
-          type: 'PROFESSOR',
-          mustChangePassword: true,
-          professor: {
-            create: {
-              employeeNumber: data.professorData.employeeNumber,
-              department: data.professorData.department,
-              position: data.professorData.position,
+      const professorData = data.professorData;
+
+      const user = await prisma.$transaction(async (tx) => {
+
+        const created = await prisma.user.create({
+          data: {
+            username: data.username,
+            password: hashedPassword,
+            email: data.email,
+            name: data.name,
+            type: 'PROFESSOR',
+            mustChangePassword: true,
+            professor: {
+              create: {
+                employeeNumber: professorData.employeeNumber,
+                department: professorData.department,
+                position: professorData.position,
+              },
             },
           },
-        },
-        omit: { password: true }
+          omit: { password: true }
+        });
+
+        await AuditService.log({
+          actorId,
+          action: 'USER_CREATED',
+          entityType: 'User',
+          entityId: created.id,
+          description: `Created PROFESSOR account ${created.username}`,
+          newValue: { type: created.type, username: created.username }
+        }, tx);
+  
+        return created;
       });
 
       return user;
     }
 
     if (data.type === 'ADMIN') {
-      const user = await prisma.user.create({
-        data: {
-          username: data.username,
-          password: hashedPassword,
-          email: data.email,
-          name: data.name,
-          type: 'ADMIN',
-          mustChangePassword: true,
-        },
-        omit: { password: true }
+      const user = await prisma.$transaction(async (tx) => {
+
+        const created = await tx.user.create({
+          data: {
+            username: data.username,
+            password: hashedPassword,
+            email: data.email,
+            name: data.name,
+            type: 'ADMIN',
+            mustChangePassword: true,
+          },
+          omit: { password: true }
+        });
+
+        await AuditService.log({
+          actorId,
+          action: 'USER_CREATED',
+          entityType: 'User',
+          entityId: created.id,
+          description: `Created ADMIN account ${created.username}`,
+          newValue: { type: created.type, username: created.username }
+        }, tx);
+
+        return created;
       });
 
       return user;
