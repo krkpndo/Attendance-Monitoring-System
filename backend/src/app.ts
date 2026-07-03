@@ -12,6 +12,7 @@ import studentRoutes from './routes/student.route';
 import professorRoutes from './routes/professor.route';
 import adminRoutes from './routes/admin.route';
 import deviceRoutes from './routes/device.route';
+import attachmentRoutes from './routes/attachment.route';
 import { errorHandler, handleMulterError } from './middlewares/error.middleware';
 
 const app = express();
@@ -27,10 +28,12 @@ app.use('/student', studentRoutes);
 app.use('/professor', professorRoutes);
 app.use('/admin', adminRoutes);
 app.use('/device', deviceRoutes);
+app.use('/attachments', attachmentRoutes);
 
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Serve public uploads only (profile images). Excuse attachments are sensitive
+// and are served through the authenticated /attachments route instead.
+app.use('/uploads/profiles', express.static(path.join(process.cwd(), 'uploads', 'profiles')));
 
 // Health Check
 app.get('/health', (req: Request, res: Response) => {

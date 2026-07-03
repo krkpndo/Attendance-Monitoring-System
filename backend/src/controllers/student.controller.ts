@@ -215,10 +215,6 @@ export const uploadExcuseAttachment = async (req: Request, res: Response, next: 
         );
 
         if (oversizedImage) {
-            await Promise.all(
-                files.map((file) => fs.promises.unlink(file.path).catch(() => {}))
-            );
-
             throw new AppError('Image files must be under 5MB', 400, 'FILE_TOO_LARGE');
         }
 
@@ -240,6 +236,14 @@ export const uploadExcuseAttachment = async (req: Request, res: Response, next: 
             message: files.length > 1 ? `Attachments uploaded successfully` : `Attachment uploaded successfully`,
         });
     } catch (error) {
+        // Any failure (validation, oversize, service error) leaves the multer-written
+        // files orphaned on disk — clean them up before forwarding the error.
+        const uploaded = req.files as Express.Multer.File[] | undefined;
+        if (uploaded) {
+            await Promise.all(
+                uploaded.map((file) => fs.promises.unlink(file.path).catch(() => {}))
+            );
+        }
         next(error);
     }
 };

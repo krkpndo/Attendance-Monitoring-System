@@ -28,12 +28,12 @@ export const submitRfidRequestSchema = z.object({
     })
 });
 
-export const getAbsencesQuerySchema = z.object({
-    startDate: z.string().min(1, 'Start date is required'),
-    endDate: z.string().min(1, 'End date is required')
-});
-
 const attendanceDateString = z.string().refine((value) => !Number.isNaN(Date.parse(value)), 'Invalid date format');
+
+export const getAbsencesQuerySchema = z.object({
+    startDate: attendanceDateString,
+    endDate: attendanceDateString
+});
 
 export const getStudentAttendanceQuerySchema = z.object({
     classId: z.uuid('Invalid class ID').optional(),

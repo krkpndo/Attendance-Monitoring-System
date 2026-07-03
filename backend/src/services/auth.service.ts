@@ -9,6 +9,11 @@ import MailService from './mail.service';
 
 type SessionMeta = { userAgent?: string; ipAddress?: string; };
 
+// Precomputed at module load so a login attempt for a non-existent identifier
+// still pays the argon2 cost. This keeps response timing constant whether or not
+// the identifier exists, preventing account enumeration via a timing side-channel.
+const dummyHashPromise = argon2.hash(crypto.randomBytes(32).toString('hex'));
+
 class AuthService {
 
     private static async issueSession(
@@ -106,6 +111,10 @@ class AuthService {
             return this.issueSession(user, meta);
         }
     
+        // No account matched. Burn an equivalent argon2 verification so this path
+        // costs the same as a wrong-password attempt (constant-time enumeration guard).
+        await argon2.verify(await dummyHashPromise, param.password).catch(() => false);
+
         throw new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS');
     }
 
@@ -128,7 +137,7 @@ class AuthService {
             include: { user: { select: { status: true } } }
         });
 
-        if (!session || session.tokenHash !== hashToken(refreshToken)) {
+        if (!session) {
             throw new AppError('Session expired. Please log in again.', 401, 'SESSION_INVALID');
         }
 

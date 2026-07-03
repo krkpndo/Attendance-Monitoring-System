@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { StudentAbsencesDto, StudentAttendanceDto, StudentUpdateProfileDto, SubmitExcuseLetterDto, UploadExcuseLetterAttachmentsDto } from "../interfaces/student.interface";
 import argon2 from 'argon2';
-import { RfidRequestType, RfidRequestStatus, Prisma } from "@prisma/client";
+import { RfidRequestType, Prisma } from "@prisma/client";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
 import NotificationService from "./notification.service";
 import { normalizeRfid } from "../utils/rfid_utils";
@@ -491,7 +491,16 @@ class StudentService {
         if (alreadyReviewed) {
             throw new AppError('Cannot upload attachments once the excuse letter has been reviewed', 400, 'EXCUSE_ALREADY_PROCESSED');
         }
-    
+
+        const MAX_ATTACHMENTS = 3;
+        const existingCount = await prisma.excuseAttachment.count({
+            where: { excuseId: param.excuseId }
+        });
+
+        if (existingCount + param.files.length > MAX_ATTACHMENTS) {
+            throw new AppError(`An excuse letter can have at most ${MAX_ATTACHMENTS} attachments`, 400, 'ATTACHMENT_LIMIT_EXCEEDED');
+        }
+
         const attachments = await prisma.excuseAttachment.createMany({
             data: param.files.map(file => ({
                 excuseId: param.excuseId,
@@ -594,6 +603,7 @@ class StudentService {
                 },
                 attachments: {
                     select: {
+                        id: true,
                         fileName: true,
                         fileType: true,
                         fileSize: true
@@ -619,65 +629,54 @@ class StudentService {
             throw new AppError('Student not found', 404, 'STUDENT_NOT_FOUND');
         }
 
-        const pendingRequest = await prisma.rfidRequest.findFirst({
-            where: { studentId: student.id, status: 'PENDING' }
-        });
+        const request = await prisma.$transaction(async (tx) => {
+            // Serialize a student's concurrent RFID requests so two in-flight
+            // submissions can't both pass the pending-check and create duplicates.
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(5, hashtext(${student.id}))`;
 
-        if (pendingRequest) {
-            throw new AppError('You already have a pending RFID request', 400, 'RFID_REQUEST_PENDING');
-        }
+            const pendingRequest = await tx.rfidRequest.findFirst({
+                where: { studentId: student.id, status: 'PENDING' }
+            });
 
-        const activeCard = await prisma.rfidCard.findFirst({
-            where: { studentId: student.id, status: 'ACTIVE' }
-        });
-
-        let request: {
-            id: string;
-            type: RfidRequestType;
-            status: RfidRequestStatus;
-            note: string|null;
-            createdAt: Date;
-        };
-
-        if (data.type === 'NEW') {
-            if (activeCard) {
-                throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_ACTIVE');
+            if (pendingRequest) {
+                throw new AppError('You already have a pending RFID request', 400, 'RFID_REQUEST_PENDING');
             }
 
-            request = await prisma.rfidRequest.create({
-                data: { studentId: student.id, type: 'NEW', note: data.note },
-                select: { id: true, type: true, status: true, note: true, createdAt: true }
+            const activeCard = await tx.rfidCard.findFirst({
+                where: { studentId: student.id, status: 'ACTIVE' }
             });
-        } else {
+
+            if (data.type === 'NEW') {
+                if (activeCard) {
+                    throw new AppError('You already have an active RFID card', 400, 'RFID_ALREADY_ACTIVE');
+                }
+
+                return tx.rfidRequest.create({
+                    data: { studentId: student.id, type: 'NEW', note: data.note },
+                    select: { id: true, type: true, status: true, note: true, createdAt: true }
+                });
+            }
 
             if (!activeCard) {
                 throw new AppError('You have no active RFID card to report', 400, 'NO_ACTIVE_RFID');
             }
 
-            request = await prisma.$transaction(async (tx) => {
-                await tx.rfidCard.update({
-                    where: { id: activeCard.id },
-                    data: {
-                        status: 'REVOKED',
-                        revokedAt: new Date(),
-                        revokedReason: data.type === 'LOST'
-                            ? 'Reported lost by student'
-                            : 'Reported damaged by student'
-                    }
-                });
-    
-                return tx.rfidRequest.create({
-                    data: { studentId: student.id, type: data.type, note: data.note },
-                    select: {
-                        id: true,
-                        type: true,
-                        status: true,
-                        note: true,
-                        createdAt: true
-                    }
-                });
+            await tx.rfidCard.update({
+                where: { id: activeCard.id },
+                data: {
+                    status: 'REVOKED',
+                    revokedAt: new Date(),
+                    revokedReason: data.type === 'LOST'
+                        ? 'Reported lost by student'
+                        : 'Reported damaged by student'
+                }
             });
-        }
+
+            return tx.rfidRequest.create({
+                data: { studentId: student.id, type: data.type, note: data.note },
+                select: { id: true, type: true, status: true, note: true, createdAt: true }
+            });
+        });
 
         const admins = await prisma.user.findMany({
             where: { type: 'ADMIN', status: 'ACTIVE' },

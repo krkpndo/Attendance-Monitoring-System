@@ -3,7 +3,8 @@ import ProfessorService from '../services/professor.service';
 import NotificationService from '../services/notification.service';
 import { AppError } from '../utils/app_error';
 import { MarkAttendanceDto, ReviewExcuseLetterDto, UpdateProfileDto } from '../interfaces/professor.interface';
-import { stat } from 'node:fs';
+import path from 'path';
+import fs from 'fs';
 
 
 // Profile
@@ -39,6 +40,10 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
           message: 'Profile updated successfully',
       });
   } catch (error) {
+      if (req.file) {
+          const p = path.join(process.cwd(), 'uploads', 'profiles', req.file.filename);
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+      }
       next(error);
   }
 };

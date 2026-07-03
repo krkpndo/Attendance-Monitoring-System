@@ -71,6 +71,9 @@ export const setClassScheduleSchema = z.object({
                 .min(1, 'At least one day is required'),
             startTime: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, 'Time format must be HH:MM:SS'),
             endTime: z.string().regex(/^\d{2}:\d{2}:\d{2}$/, 'Time format must be HH:MM:SS')
+        }).refine((s) => s.startTime < s.endTime, {
+            message: 'startTime must be before endTime',
+            path: ['endTime']
         })
     ).min(1, 'At least one schedule is required')
 });
@@ -79,8 +82,20 @@ export const getAttendanceQuerySchema = z.object({
     classId: z.string().optional(),
     sessionId: z.string().optional(),
     studentId: z.string().optional(),
-    startDate: z.string().optional(),
-    endDate: z.string().optional()
+    startDate: z.coerce.date({ message: 'Invalid start date' }).optional(),
+    endDate: z.coerce.date({ message: 'Invalid end date' }).optional()
+});
+
+export const getAuditLogsQuerySchema = z.object({
+    userId: z.uuid().optional(),
+    action: z.enum([
+        'MANUAL_ATTENDANCE', 'ATTENDANCE_OVERRIDE', 'EXCUSE_APPROVED', 'EXCUSE_REJECTED',
+        'SESSION_OPENED', 'SESSION_CLOSED', 'SESSION_CANCELLED', 'ENROLLMENT_ADDED',
+        'ENROLLMENT_DROPPED', 'RFID_REVOKED', 'RFID_REQUEST_REJECTED', 'USER_STATUS_CHANGED',
+        'USER_CREATED', 'DEVICE_REGISTERED', 'DEVICE_REVOKED', 'DEVICE_CLAIMED'
+    ], { message: 'Invalid audit action' }).optional(),
+    startDate: z.coerce.date({ message: 'Invalid start date' }).optional(),
+    endDate: z.coerce.date({ message: 'Invalid end date' }).optional()
 });
 
 export const getExcuseLettersQuerySchema = z.object({
