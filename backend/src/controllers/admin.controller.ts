@@ -63,7 +63,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
       const userId  = req.params.userId as string;
       const { name, email, status, username, password } = req.body;
 
-      const result = await AdminService.updateUser(userId, { name, email, username, password });
+      const result = await AdminService.updateUser(req.user!.userId, userId, { name, email, username, password });
 
       return res.status(200).json({
           success: true,
@@ -80,8 +80,8 @@ export const updateStudent = async (req: Request, res: Response, next: NextFunct
       const userId  = req.params.userId as string;
       const { studentNumber, yearLevel, program, section, department } = req.body;
 
-      const result = await AdminService.updateStudent(userId, { 
-          studentNumber, yearLevel, program, section, department 
+      const result = await AdminService.updateStudent(req.user!.userId, userId, {
+          studentNumber, yearLevel, program, section, department
       });
 
       return res.status(200).json({
@@ -99,8 +99,8 @@ export const updateProfessor = async (req: Request, res: Response, next: NextFun
       const userId  = req.params.userId as string;
       const { employeeNumber, department, position } = req.body;
 
-      const result = await AdminService.updateProfessor(userId, { 
-          employeeNumber, department, position 
+      const result = await AdminService.updateProfessor(req.user!.userId, userId, {
+          employeeNumber, department, position
       });
 
       return res.status(200).json({

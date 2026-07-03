@@ -231,7 +231,7 @@ class AdminService {
     return user;
   }
 
-  static async updateUser(userId: string, data: UpdateUserProfileDto) {
+  static async updateUser(actorId: string, userId: string, data: UpdateUserProfileDto) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -269,24 +269,47 @@ class AdminService {
         updateData.password = await argon2.hash(data.password);
     }
 
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        name: true,
-        type: true,
-        status: true,
-        profileImage: true,
-      },
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: userId },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          name: true,
+          type: true,
+          status: true,
+          profileImage: true,
+        },
+      });
+
+      // A password change must invalidate all existing sessions.
+      if (data.password) {
+        await tx.session.deleteMany({ where: { userId } });
+      }
+
+      await AuditService.log({
+        actorId,
+        action: 'USER_UPDATED',
+        entityType: 'User',
+        entityId: userId,
+        description: `Updated ${updated.type} account ${updated.username}`,
+        newValue: {
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.email !== undefined && { email: data.email }),
+          ...(data.username !== undefined && { username: data.username }),
+          ...(data.password ? { passwordChanged: true } : {})
+        }
+      }, tx);
+
+      return updated;
     });
 
     return updatedUser;
   }
 
-  static async updateStudent(userId: string, data: UpdateStudentProfileDto) {
+  static async updateStudent(actorId: string, userId: string, data: UpdateStudentProfileDto) {
     const student = await prisma.student.findUnique({
         where: { userId }
     });
@@ -304,21 +327,40 @@ class AdminService {
         }
     }
 
-    const updated = await prisma.student.update({
-        where: { userId },
-        data: {
-            studentNumber: data.studentNumber,
-            yearLevel: data.yearLevel,
-            program: data.program,
-            section: data.section,
-            department: data.department,
-        }
+    const updated = await prisma.$transaction(async (tx) => {
+        const record = await tx.student.update({
+            where: { userId },
+            data: {
+                studentNumber: data.studentNumber,
+                yearLevel: data.yearLevel,
+                program: data.program,
+                section: data.section,
+                department: data.department,
+            }
+        });
+
+        await AuditService.log({
+            actorId,
+            action: 'USER_UPDATED',
+            entityType: 'Student',
+            entityId: userId,
+            description: 'Updated student profile',
+            newValue: {
+                ...(data.studentNumber !== undefined && { studentNumber: data.studentNumber }),
+                ...(data.yearLevel !== undefined && { yearLevel: data.yearLevel }),
+                ...(data.program !== undefined && { program: data.program }),
+                ...(data.section !== undefined && { section: data.section }),
+                ...(data.department !== undefined && { department: data.department })
+            }
+        }, tx);
+
+        return record;
     });
 
     return updated;
   }
 
-  static async updateProfessor(userId: string, data: UpdateProfessorProfileDto) {
+  static async updateProfessor(actorId: string, userId: string, data: UpdateProfessorProfileDto) {
     const professor = await prisma.professor.findUnique({
         where: { userId }
     });
@@ -336,13 +378,30 @@ class AdminService {
         }
     }
 
-    const updated = await prisma.professor.update({
-        where: { userId },
-        data: {
-            employeeNumber: data.employeeNumber,
-            department: data.department,
-            position: data.position,
-        }
+    const updated = await prisma.$transaction(async (tx) => {
+        const record = await tx.professor.update({
+            where: { userId },
+            data: {
+                employeeNumber: data.employeeNumber,
+                department: data.department,
+                position: data.position,
+            }
+        });
+
+        await AuditService.log({
+            actorId,
+            action: 'USER_UPDATED',
+            entityType: 'Professor',
+            entityId: userId,
+            description: 'Updated professor profile',
+            newValue: {
+                ...(data.employeeNumber !== undefined && { employeeNumber: data.employeeNumber }),
+                ...(data.department !== undefined && { department: data.department }),
+                ...(data.position !== undefined && { position: data.position })
+            }
+        }, tx);
+
+        return record;
     });
 
     return updated;

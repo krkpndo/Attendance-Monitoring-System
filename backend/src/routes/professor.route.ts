@@ -4,7 +4,7 @@ import * as ProfessorController from '../controllers/professor.controller';
 import { profileUpload } from '../config/profile-upload';
 import { validate } from '../middlewares/validation.middleware';
 import { markAttendanceSchema, openSessionSchema } from '../validators/professor.validators';
-import { reviewExcuseLetterSchema } from '../validators/shared.validators';
+import { reviewExcuseLetterSchema, updateProfileSchema } from '../validators/shared.validators';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.use(authenticate, authorize('PROFESSOR'));
 
 // Profile
 router.get('/profile', ProfessorController.getProfile);
-router.patch('/profile', profileUpload.single('profileImage'), ProfessorController.updateProfile);
+router.patch('/profile', profileUpload.single('profileImage'), validate(updateProfileSchema), ProfessorController.updateProfile);
 
 // Classes
 router.get('/classes', ProfessorController.getAssignedClasses);

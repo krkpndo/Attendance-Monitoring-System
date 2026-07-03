@@ -92,17 +92,15 @@ class ProfessorService {
             updateData.password = await argon2.hash(data.newPassword);
         }
     
-        await prisma.user.update({
-            where: { id: userId },
-            data: updateData,
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                username: true,
-                type: true,
-                status: true,
-                profileImage: true
+        await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+                where: { id: userId },
+                data: updateData
+            });
+
+            // A password change must invalidate all existing sessions.
+            if (data.newPassword) {
+                await tx.session.deleteMany({ where: { userId } });
             }
         });
 
