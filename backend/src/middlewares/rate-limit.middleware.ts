@@ -2,7 +2,7 @@ import rateLimit from "express-rate-limit";
 import { Request, Response } from 'express';
 
 const jsonHandler = (message: string) => (_req: Request, res: Response) => {
-    res.status(409).json({ success: false, message: 'RATE_LIMITED' });
+    res.status(429).json({ success: false, message, code: 'RATE_LIMITED' });
 };
 
 export const loginRateLimiter = rateLimit({

@@ -42,14 +42,14 @@ class ProfessorService {
     }
 
     static async updateProfile(userId: string, data: UpdateProfileDto) {
-        const student = await prisma.professor.findUnique({
+        const professor = await prisma.professor.findUnique({
             where: { userId },
             include: {
                 user: { select: { password: true, profileImage: true, email: true, username: true } }
             }
         });
-    
-        if (!student) {
+
+        if (!professor) {
             throw new AppError('Professor profile not found', 404, 'NOT_FOUND');
         }
 
@@ -57,13 +57,13 @@ class ProfessorService {
             throw new AppError('Current password is required to update profile', 400, 'PASSWORD_REQUIRED');
         }
 
-        const validPassword = await argon2.verify(student.user.password, data.password);
+        const validPassword = await argon2.verify(professor.user.password, data.password);
 
         if (!validPassword) {
             throw new AppError('Incorrect password', 401, 'INVALID_PASSWORD');
         }
 
-        if (data.email && data.email !== student.user.email) {
+        if (data.email && data.email !== professor.user.email) {
             const emailExists = await prisma.user.findFirst({
                 where: { email: data.email, NOT: { id: userId } }
             });
@@ -72,7 +72,7 @@ class ProfessorService {
             }
         }
 
-        if (data.username && data.username !== student.user.username) {
+        if (data.username && data.username !== professor.user.username) {
             const usernameExists = await prisma.user.findFirst({
                 where: { username: data.username, NOT: { id: userId } }
             });
@@ -104,8 +104,8 @@ class ProfessorService {
             }
         });
 
-        if (data.profileImage && student.user.profileImage) {
-            const oldPath = path.join(process.cwd(), student.user.profileImage);
+        if (data.profileImage && professor.user.profileImage) {
+            const oldPath = path.join(process.cwd(), professor.user.profileImage);
             if (fs.existsSync(oldPath)) {
                 fs.unlinkSync(oldPath);
             }
@@ -748,7 +748,7 @@ class ProfessorService {
             title: data.status === 'APPROVED' ? 'Excuse approved' : 'Excuse Rejected',
             message: data.status === 'APPROVED'
                 ? `Your excuse was approved for ${attendanceIds.length} class record(s).`
-                : `You excuse was rejected for ${attendanceIds.length} class record(s): ${data.rejectionReason}`,
+                : `Your excuse was rejected for ${attendanceIds.length} class record(s): ${data.rejectionReason}`,
                 metadata: result
         });
 
