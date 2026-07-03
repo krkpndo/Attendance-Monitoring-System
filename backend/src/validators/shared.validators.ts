@@ -12,6 +12,10 @@ export const updateProfileSchema = z.object({
     newPassword: z.string().min(8, 'New password must be at least 8 characters').optional()
 });
 
+export const attachmentIdParamSchema = z.object({
+    attachmentId: z.uuid('Invalid attachment ID')
+});
+
 // Excuse review is shared by admin (oversight) and professor (own classes)
 export const reviewExcuseLetterSchema = z.object({
     status: z.enum(['APPROVED', 'REJECTED'], {
