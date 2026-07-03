@@ -9,7 +9,7 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
   try {
     const { username, email, name, type, studentData, professorData } = req.body;
 
-    const result = await AdminService.createUser({
+    const result = await AdminService.createUser(req.user!.userId, {
       username, email, name, type, studentData, professorData,
     });
 
