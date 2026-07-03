@@ -61,7 +61,7 @@ export const getUserDetail = async (req: Request, res: Response, next: NextFunct
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
       const userId  = req.params.userId as string;
-      const { name, email, status, username, password } = req.body;
+      const { name, email, username, password } = req.body;
 
       const result = await AdminService.updateUser(req.user!.userId, userId, { name, email, username, password });
 
