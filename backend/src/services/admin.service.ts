@@ -1026,6 +1026,20 @@ class AdminService {
         omit: { createdAt: true, updatedAt: true }
       });
 
+      // Remove the student's placeholder ABSENT records for any session still
+      // OPEN — they shouldn't be marked absent for a class they've just left.
+      // Real taps (PRESENT/LATE) and past closed sessions are left untouched.
+      const openAbsent = await tx.attendanceRecord.findMany({
+        where: { studentId, status: 'ABSENT', session: { classId, status: 'OPEN' } },
+        select: { id: true }
+      });
+
+      if (openAbsent.length > 0) {
+        const recordIds = openAbsent.map((r) => r.id);
+        await tx.excuseDate.deleteMany({ where: { attendanceId: { in: recordIds } } });
+        await tx.attendanceRecord.deleteMany({ where: { id: { in: recordIds } } });
+      }
+
       await AuditService.log({
         actorId ,
         action: 'ENROLLMENT_DROPPED',

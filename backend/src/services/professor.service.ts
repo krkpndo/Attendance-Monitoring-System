@@ -389,6 +389,9 @@ class ProfessorService {
                 id: sessionId,
                 class: { professorId: userId },
                 status: { in: ['SCHEDULED', 'OPEN'] }
+            },
+            include: {
+                class: { select: { course: { select: { courseCode: true } } } }
             }
         });
 
@@ -397,6 +400,20 @@ class ProfessorService {
         }
 
         await prisma.$transaction(async (tx) => {
+            // A cancelled session never happened — void its auto-created attendance
+            // records (and any excuse dates tied to them) so no student is marked
+            // absent for a class that did not occur.
+            const records = await tx.attendanceRecord.findMany({
+                where: { sessionId },
+                select: { id: true }
+            });
+
+            if (records.length > 0) {
+                const recordIds = records.map((r) => r.id);
+                await tx.excuseDate.deleteMany({ where: { attendanceId: { in: recordIds } } });
+                await tx.attendanceRecord.deleteMany({ where: { sessionId } });
+            }
+
             await tx.attendanceSession.update({
                 where: { id: sessionId },
                 data: { status: 'CANCELLED', cancelledBy: userId, cancelledAt: new Date() }
@@ -411,6 +428,24 @@ class ProfessorService {
                 newValue: { status: 'CANCELLED' }
             }, tx);
         });
+
+        // Best-effort: let enrolled students know the session was cancelled.
+        const enrollments = await prisma.classEnrollment.findMany({
+            where: { classId: session.classId, status: 'ENROLLED' },
+            select: { studentId: true }
+        });
+
+        const courseCode = session.class.course.courseCode;
+
+        const notifications: CreateNotificationInput[] = enrollments.map((enrollment) => ({
+            userId: enrollment.studentId,
+            type: 'SESSION_CANCELLED',
+            title: 'Class session cancelled',
+            message: `The attendance session for ${courseCode} was cancelled.`,
+            metadata: { sessionId, classId: session.classId }
+        }));
+
+        await NotificationService.safeCreateMany(notifications);
     }
 
     static async getAttendanceSessions(userId: string, classId: string) {
