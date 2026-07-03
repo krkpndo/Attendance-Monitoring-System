@@ -250,10 +250,10 @@ class ProfessorService {
 
         const session = await prisma.$transaction(async (tx) => {
 
-            await tx.$executeRaw`SELECT pg_advisory_xact_lock(1, hashText(${classId}))`;
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(1, hashtext(${classId}))`;
 
             if (deviceId) {
-                await tx.$executeRaw`SELECT pg_advisory_xact_lock(2, hashText($deviceId))`;
+                await tx.$executeRaw`SELECT pg_advisory_xact_lock(2, hashtext(${deviceId}))`;
             }
 
             const existingSession = await prisma.attendanceSession.findFirst({

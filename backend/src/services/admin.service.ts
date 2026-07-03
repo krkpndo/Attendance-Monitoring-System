@@ -844,7 +844,9 @@ class AdminService {
           description: `Re-enrolled in ${classRecord.course.courseCode}`,
           oldValue: { status: existingEnrollment.status },
           newValue: { status: 'ENROLLED' }
-        });
+        }, tx);
+
+        return updated;
       });
 
       await NotificationService.safeCreate({

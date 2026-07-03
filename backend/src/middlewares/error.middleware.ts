@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/app_error";
 import multer from "multer";
 import { Prisma } from "@prisma/client";
-import { success } from "zod";
 
 export const errorHandler = (err: Error, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof AppError) {
@@ -66,7 +65,7 @@ export const handleMulterError = (err: any, req: Request, res: Response, next: N
                 return next(new AppError('Only one file is allowed for profile image', 400, 'TOO_MANY_FILES'));
 
             case 'LIMIT_FILE_SIZE':
-                return next(new AppError('File size exceeds the allowed limit', 400, 'FILE_TOO_LARGE'));
+                return next(new AppError('Too many files uploaded', 400, 'TOO_MAY_FILES'));
 
             case 'LIMIT_UNEXPECTED_FILE':
                 return next(new AppError(`Unexpected field name: "${err.field}". Use "profileImage" for profile uploads or "files" for attachments`, 400, 'UNEXPECTED_FIELD'));

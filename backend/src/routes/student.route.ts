@@ -26,7 +26,7 @@ router.get('/excuse-letters', StudentController.getExcuseLetters);
 router.get('/excuse-letters/:excuseId', StudentController.getExcuseLetterDetail);
 router.post('/excuse-letters/submit', validate(submitExcuseLetterSchema), StudentController.submitExcuseLetter);
 router.post('/excuse-letters/:excuseId/attachments',
-    excuseUpload.array('files', 5),
+    excuseUpload.array('files', 3),
     StudentController.uploadExcuseAttachment
 );
 
