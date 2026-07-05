@@ -5,6 +5,7 @@ import { excuseUpload } from '../config/attachment-upload';
 import { validate } from '../middlewares/validation.middleware';
 import { getAbsencesQuerySchema, getStudentAttendanceQuerySchema, registerRfidSchema, studentUpdateProfileSchema, submitExcuseLetterSchema, submitRfidRequestSchema } from '../validators/student.validators';
 import { profileUpload } from '../config/profile-upload';
+import { paginationQuerySchema } from '../validators/shared.validators';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.post('/excuse-letters/:excuseId/attachments',
 );
 
 // Notifications
-router.get('/notifications', StudentController.getNotifications);
+router.get('/notifications', validate(paginationQuerySchema, 'query'),StudentController.getNotifications);
 router.patch('/notifications/:notificationId/read', StudentController.markNotificationsAsRead);
 
 // RFID

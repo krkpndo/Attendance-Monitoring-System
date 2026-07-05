@@ -4,7 +4,7 @@ import * as ProfessorController from '../controllers/professor.controller';
 import { profileUpload } from '../config/profile-upload';
 import { validate } from '../middlewares/validation.middleware';
 import { markAttendanceSchema, openSessionSchema } from '../validators/professor.validators';
-import { reviewExcuseLetterSchema, updateProfileSchema } from '../validators/shared.validators';
+import { paginationQuerySchema, reviewExcuseLetterSchema, updateProfileSchema } from '../validators/shared.validators';
 
 const router = Router();
 
@@ -36,7 +36,7 @@ router.get('/excuse-letters/:excuseId', ProfessorController.getExcuseLetterDetai
 router.patch('/excuse-letters/:excuseId/review', validate(reviewExcuseLetterSchema), ProfessorController.reviewExcuseLetter);
 
 // Notifications
-router.get('/notifications', ProfessorController.getNotifications);
+router.get('/notifications', validate(paginationQuerySchema, 'query'), ProfessorController.getNotifications);
 router.patch('/notifications/:notificationId/read', ProfessorController.markNotificationAsRead);
 
 export default router;

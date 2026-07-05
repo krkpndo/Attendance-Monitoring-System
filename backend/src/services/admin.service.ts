@@ -7,6 +7,7 @@ import AuditService from './audit.service';
 import NotificationService from './notification.service';
 import { generateDeviceToken, hashToken } from '../utils/token_utils';
 import { create } from 'node:domain';
+import { buildPaginationMeta, getPaginationArgs, PaginatedResult, PaginationParams } from '../utils/pagination';
 
 class AdminService {
 
@@ -1354,25 +1355,35 @@ class AdminService {
   }
 
   // Audit Logs
-  static async getAuditLogs(filters?: { userId?: string; action?: AuditAction; startDate?: Date; endDate?: Date }) {
-    const logs = await prisma.auditLog.findMany({
-      where: {
-        ...(filters?.userId && { userId: filters.userId }),
-        ...(filters?.action && { action: filters.action }),
-        ...(filters?.startDate && filters?.endDate && {
-          createdAt: {
-            gte: filters.startDate,
-            lte: filters.endDate,
-          },
-        }),
-      },
-      include: {
-        user: { select: { name: true, type: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+  static async getAuditLogs(
+    filters?: { userId?: string; action?: AuditAction; startDate?: Date; endDate?: Date } & Partial<PaginationParams>): Promise<PaginatedResult<Awaited<ReturnType<typeof prisma.auditLog.findMany>>[number]>> {
 
-    return logs;
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+    
+    // Build once, reuse for both the page query and the count so they agree.
+    const where = {
+      ...(filters?.userId && { userId: filters.userId }),
+      ...(filters?.action && { action: filters.action }),
+      ...(filters?.startDate && filters?.endDate && {
+        createdAt: {
+          gte: filters.startDate,
+          lte: filters.endDate
+        },
+      }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.auditLog.findMany({
+        where,
+        include: { user: { select: { name: true, type: true } } },
+        orderBy: { createdAt: 'desc' },
+        ...getPaginationArgs({ page, limit })
+      }),
+      prisma.auditLog.count({ where })
+    ]);
+
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   static async getRfidRequests(filters?: { status?: RfidRequestStatus }) {

@@ -280,7 +280,10 @@ export const getExcuseLetterDetail = async (req: Request, res: Response, next: N
 
 export const getNotifications = async (req: Request, res: Response) => {
     try {
-        const result = await NotificationService.getNotifications(req.user!.userId);
+        const result = await NotificationService.getNotifications(req.user!.userId, {
+            page: Number(req.query.page),
+            limit: Number(req.query.limit)
+        });
 
         return res.status(200).json({
             success: true,

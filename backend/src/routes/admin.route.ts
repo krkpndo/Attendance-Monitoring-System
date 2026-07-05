@@ -3,7 +3,7 @@ import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
 import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema, updateProfessorSchema, updateStudentSchema, updateUserSchema } from '../validators/admin.validators';
-import { reviewExcuseLetterSchema } from '../validators/shared.validators';
+import { paginationQuerySchema, reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
 
@@ -54,7 +54,7 @@ router.patch('/excuse-letters/:excuseId/review', validate(reviewExcuseLetterSche
 router.get('/audit-logs', validate(getAuditLogsQuerySchema, 'query'), AdminController.getAuditLogs);
 
 // Notifications
-router.get('/notifications', AdminController.getNotifications);
+router.get('/notifications', validate(paginationQuerySchema, 'query'), AdminController.getNotifications);
 router.patch('/notifications/:notificationId/read', AdminController.markNotificationAsRead);
 
 // RFID

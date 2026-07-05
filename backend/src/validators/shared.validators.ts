@@ -23,3 +23,11 @@ export const reviewExcuseLetterSchema = z.object({
     }),
     rejectionReason: z.string().max(500).optional()
 });
+
+// Reusable page/limit fragment. `z.coerce` because query params arrive as
+// strings; the validate middleware writes the coerced values back onto
+// req.query, so controllers receive real numbers with defaults applied.
+export const paginationQuerySchema = z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20)
+});
