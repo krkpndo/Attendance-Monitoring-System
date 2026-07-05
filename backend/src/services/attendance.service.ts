@@ -1,3 +1,4 @@
+import { env } from "../config/env";
 import prisma from "../config/prisma";
 import { AppError } from "../utils/app_error";
 import { normalizeRfid } from "../utils/rfid_utils";
@@ -66,10 +67,14 @@ class AttendanceEngine {
             };
         }
 
-        const thresholdMinutes = Number(process.env.ATTENDANCE_LATE_THRESHOLD_MINUTES ?? 15);
+        const thresholdMinutes = Number(env.ATTENDANCE_LATE_THRESHOLD_MINUTES ?? 15);
+
         const reference = session.openedAt ?? new Date();
+
         const cutoff = new Date(reference.getTime() + thresholdMinutes * 60_000);
+
         const now = new Date();
+        
         const status = now <= cutoff ? 'PRESENT' : 'LATE';
 
         const result = await prisma.attendanceRecord.updateMany({

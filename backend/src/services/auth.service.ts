@@ -6,6 +6,7 @@ import { LoginParam, LoginResponse } from '../interfaces/auth.interface';
 import { TokenPayload } from '../interfaces/token.interface';
 import crypto from 'crypto';
 import MailService from './mail.service';
+import { env } from '../config/env';
 
 type SessionMeta = { userAgent?: string; ipAddress?: string; };
 
@@ -201,7 +202,7 @@ class AuthService {
             }
         });
 
-        const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+        const resetLink = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
 
         try {
             await MailService.sendPasswordReset(user.email, resetLink, user.name);

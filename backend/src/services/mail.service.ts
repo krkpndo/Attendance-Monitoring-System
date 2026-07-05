@@ -1,13 +1,22 @@
 import { Resend } from "resend";
+import { env } from "../config/env";
 
-const resend = new Resend(process.env.RESEND_API_KEY as string);
+let client: Resend | null = null;
+
+const getClient = (): Resend => {
+    if (!client) {
+        client = new Resend(env.RESEND_API_KEY);
+    }
+
+    return client;
+};
 
 class MailService {
 
     static async sendPasswordReset(to: string, resetLink: string, name: string): Promise<void> {
 
-        await resend.emails.send({
-            from: process.env.EMAIL_FROM as string,
+        await getClient().emails.send({
+            from: env.EMAIL_FROM,
             to,
             subject: 'Request for Password Reset',
             html: `
