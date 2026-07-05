@@ -123,10 +123,12 @@ export const getAttendance = async (req: Request, res: Response, next: NextFunct
             userId: req.user!.userId,
             classId,
             startDate: startDate ? new Date(startDate) : undefined,
-            endDate: endDate ? new Date(endDate) : undefined
+            endDate: endDate ? new Date(endDate) : undefined,
+            page: Number(req.query.page),
+            limit: Number(req.query.limit)
         });
 
-        if (record.length === 0) {
+        if (record.items.length === 0) {
             return res.status(200).json({
                 success: true,
                 message: 'Attendance records empty',

@@ -1,4 +1,5 @@
 import { ClassStatus, Semester, UserType, VerificationStatus } from "@prisma/client";
+import { PaginationParams } from "../utils/pagination";
 
 export interface CreateUserDto {
     username: string;
@@ -40,7 +41,7 @@ export interface UpdateUserProfileDto {
   password?: string;
 }
 
-export interface StudentSearchFilter {
+export interface StudentSearchFilter extends Partial<PaginationParams> {
   search?: string;
   program?: string;
   yearLevel?: number;
@@ -70,7 +71,7 @@ export interface CreateClassDto {
   room?: string;
 }
 
-export interface GetClassesFilter {
+export interface GetClassesFilter extends Partial<PaginationParams> {
   courseId?: string;
   professorId?: string;
   schoolYear?: string;
@@ -91,7 +92,7 @@ export interface SetClassScheduleDto {
   endTime: string;
 }
 
-export interface GetAttendanceRecordsDto {
+export interface GetAttendanceRecordsDto extends Partial<PaginationParams> {
   classId?: string;
   sessionId?: string;
   studentId?: string;

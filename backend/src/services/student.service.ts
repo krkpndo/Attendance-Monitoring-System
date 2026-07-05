@@ -8,6 +8,7 @@ import { RfidRequestType, Prisma } from "@prisma/client";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
 import NotificationService from "./notification.service";
 import { normalizeRfid } from "../utils/rfid_utils";
+import { buildPaginationMeta, getPaginationArgs } from "../utils/pagination";
 
 class StudentService {
     static async getStudentProfile (studentId: string) {
@@ -245,6 +246,9 @@ class StudentService {
     }
 
     static async getStudentAttendance(param: StudentAttendanceDto) {
+        const page = param.page ?? 1;
+        const limit = param.limit ?? 20;
+
         const sessionFilter: Prisma.AttendanceSessionWhereInput = {};
 
         if (param.classId) {
@@ -255,56 +259,64 @@ class StudentService {
             sessionFilter.sessionDate = { gte: param.startDate, lte: param.endDate };
         }
 
-        const record = await prisma.attendanceRecord.findMany({
-            where: {
-                studentId: param.userId,
-                ...(Object.keys(sessionFilter).length > 0 && { session: sessionFilter })
-            },
-            include: {
-                session: {
-                    include: {
-                        class: {
-                            include: {
-                                course: {
-                                    omit: {
-                                        createdAt: true,
-                                        updatedAt: true
+        const where = {
+            studentId: param.userId,
+            ...(Object.keys(sessionFilter).length > 0 && { session: sessionFilter })
+        };
+
+        const [items, total] = await prisma.$transaction([
+            prisma.attendanceRecord.findMany({
+                where,
+                include: {
+                    session: {
+                        include: {
+                            class: {
+                                include: {
+                                    course: {
+                                        omit: {
+                                            createdAt: true,
+                                            updatedAt: true
+                                        }
+                                    },
+                                    professor: {
+                                        select: {
+                                            id: true,
+                                            name: true,
+                                            profileImage: true
+                                        }
                                     }
                                 },
-                                professor: {
-                                    select: {
-                                        id: true,
-                                        name: true,
-                                        profileImage: true
-                                    }
+                                omit: {
+                                    courseId: true,
+                                    professorId: true,
+                                    createdAt: true,
+                                    updatedAt: true
                                 }
                             },
-                            omit: {
-                                courseId: true,
-                                professorId: true,
-                                createdAt: true,
-                                updatedAt: true
-                            }
                         },
-                    },
-                    omit: {
-                        id: true,
-                        scheduleId: true,
-                        createdAt: true,
-                        updatedAt: true
+                        omit: {
+                            id: true,
+                            scheduleId: true,
+                            createdAt: true,
+                            updatedAt: true
+                        }
                     }
-                }
-            },
-            omit: {
-                id: true,
-                studentId: true,
-                createdAt: true,
-                updatedAt: true
-            },
-            orderBy: { session: { sessionDate: 'desc' } }
-        });
+                },
+                omit: {
+                    id: true,
+                    studentId: true,
+                    createdAt: true,
+                    updatedAt: true
+                },
+                orderBy: { session: { sessionDate: 'desc' } },
+                ...getPaginationArgs({ page, limit }),
+            }),
+            prisma.attendanceRecord.count({ where })
+        ]);
 
-        return record;
+
+
+        return { items, pagination: buildPaginationMeta({ page, limit }, total) };
     }
 
     static async getStudentAttendanceSummary(studentId: string) {

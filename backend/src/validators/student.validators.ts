@@ -1,4 +1,5 @@
 import z from "zod";
+import { paginationQuerySchema } from "./shared.validators";
 
 export const studentUpdateProfileSchema = z.object({
     name: z.string().min(1, 'Name must have at least 5 characters').max(50, 'Name is limited to 50 characters').optional(),
@@ -18,7 +19,7 @@ export const submitExcuseLetterSchema = z.object({
         message: 'Invalid excuse type. Must be MEDICAL, EMERGENCY, SCHOOL_BUSINESS, PERSONAL, or OTHERS'
     }),
     description: z.string().min(1, 'Description is required').max(1000),
-    attendanceRecordIds: z.array(z.string().uuid('Invalid attendance record ID'))
+    attendanceRecordIds: z.array(z.uuid('Invalid attendance record ID'))
         .min(1, 'At least one attendance record is required')
 });
 
@@ -35,7 +36,7 @@ export const getAbsencesQuerySchema = z.object({
     endDate: attendanceDateString
 });
 
-export const getStudentAttendanceQuerySchema = z.object({
+export const getStudentAttendanceQuerySchema = paginationQuerySchema.extend({
     classId: z.uuid('Invalid class ID').optional(),
     startDate: attendanceDateString.optional(),
     endDate: attendanceDateString.optional()

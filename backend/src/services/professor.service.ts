@@ -8,6 +8,7 @@ import AuditService from "./audit.service";
 import NotificationService from "./notification.service";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
 import { Prisma } from "@prisma/client";
+import { buildPaginationMeta, getPaginationArgs, PaginationParams } from "../utils/pagination";
 
 class ProfessorService {
     static async getProfessorProfile(userId: string) {
@@ -558,76 +559,86 @@ class ProfessorService {
         }
     }
 
-    static async getExcuseLetters(userId: string, classId?: string) {
-        const excuseLetters = await prisma.excuseLetter.findMany({
-            where: {
-                excuseDates: {
-                    some: {
-                        attendanceRecord: {
-                            session: {
-                                class: {
-                                    professorId: userId,
-                                    ...(classId && { id: classId }),
-                                },
-                            },
-                        },
-                    },
-                },
-            },
-            include: {
-                student: {
-                    select: { name: true },
-                },
-                excuseDates: {
-                    include: {
-                        attendanceRecord: {
-                            include: {
-                                session: {
-                                    include: {
-                                        class: {
-                                            include: {
-                                                course: {
-                                                    select: {
-                                                        id: true,
-                                                        courseCode: true, courseName: true
-                                                    }
-                                                },
-                                            },
-                                            omit: {
-                                                courseId: true,
-                                                professorId: true,
-                                                createdAt: true,
-                                                updatedAt: true
-                                            }
-                                        },
-                                    },
-                                    omit: {
-                                        classId: true,
-                                        scheduleId: true,
-                                        createdAt: true,
-                                        updatedAt: true
-                                    }
-                                },
-                            },
-                            omit: {
-                                sessionId: true,
-                                studentId: true,
-                                createdAt: true,
-                                updatedAt: true
-                            }
-                        },
-                    },
-                },
-                attachments: true,
-            },
-            omit: {
-                createdAt: true,
-                updatedAt: true
-            },
-            orderBy: { submittedAt: 'desc' },
-        });
+    static async getExcuseLetters(userId: string, filters: { classId?: string } & PaginationParams) {
+        const { page, limit } = filters;
 
-        return excuseLetters;
+        const where = {
+            excuseDates: {
+                some: {
+                    attendanceRecord: {
+                        session: {
+                            class: {
+                                professorId: userId,
+                                ...(filters.classId && { id: filters.classId }),
+                            },
+                        },
+                    },
+                },
+            },
+        };
+
+        const [items, total] = await prisma.$transaction([
+            prisma.excuseLetter.findMany({
+                where,
+                include: {
+                    student: {
+                        select: { name: true },
+                    },
+                    excuseDates: {
+                        include: {
+                            attendanceRecord: {
+                                include: {
+                                    session: {
+                                        include: {
+                                            class: {
+                                                include: {
+                                                    course: {
+                                                        select: {
+                                                            id: true,
+                                                            courseCode: true, courseName: true
+                                                        }
+                                                    },
+                                                },
+                                                omit: {
+                                                    courseId: true,
+                                                    professorId: true,
+                                                    createdAt: true,
+                                                    updatedAt: true
+                                                }
+                                            },
+                                        },
+                                        omit: {
+                                            classId: true,
+                                            scheduleId: true,
+                                            createdAt: true,
+                                            updatedAt: true
+                                        }
+                                    },
+                                },
+                                omit: {
+                                    sessionId: true,
+                                    studentId: true,
+                                    createdAt: true,
+                                    updatedAt: true
+                                }
+                            },
+                        },
+                    },
+                    attachments: true,
+                },
+                omit: {
+                    createdAt: true,
+                    updatedAt: true
+                },
+                orderBy: { submittedAt: 'desc' },
+                ...getPaginationArgs({ page, limit }),
+            }),
+            prisma.excuseLetter.count({ where })
+        ]);
+
+
+
+        return { items, pagination: buildPaginationMeta({ page, limit }, total) };
     }
 
     static async getExcuseLetterDetail(userId: string, excuseId: string) {
