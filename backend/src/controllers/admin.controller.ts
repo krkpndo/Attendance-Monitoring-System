@@ -493,6 +493,8 @@ export const getAuditLogs = async (req: Request, res: Response, next: NextFuncti
       action: action as AuditAction | undefined,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
     });
 
     return res.status(200).json({
@@ -509,7 +511,10 @@ export const getAuditLogs = async (req: Request, res: Response, next: NextFuncti
 // Notifications
 export const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await NotificationService.getNotifications(req.user!.userId);
+    const result = await NotificationService.getNotifications(req.user!.userId, {
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
+    });
 
     return res.status(200).json({ success: true, message: 'Notifications retrieved successfully', data: result });
 

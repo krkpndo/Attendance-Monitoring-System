@@ -1,15 +1,22 @@
 import prisma from "../config/prisma";
 import { CreateNotificationInput } from "../interfaces/notification.interface";
 import { AppError } from "../utils/app_error";
+import { buildPaginationMeta, getPaginationArgs, PaginationParams } from "../utils/pagination";
 
 class NotificationService {
-    static async getNotifications(userId: string) {
-        const notifications = await prisma.notification.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' },
-        });
+    static async getNotifications(userId: string, { page, limit }: PaginationParams) {
+        const where = { userId };
 
-        return notifications;
+        const [items, total] = await prisma.$transaction([
+            prisma.notification.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                ...getPaginationArgs({ page, limit })
+            }),
+            prisma.notification.count({ where })
+        ]);
+
+        return { items, pagination: buildPaginationMeta({ page, limit }, total) };
     }
 
     static async markAsRead(userId: string, notificationId: string) {

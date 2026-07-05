@@ -1,4 +1,5 @@
 import z from "zod";
+import { paginationQuerySchema } from "./shared.validators";
 
 export const idParamSchema = z.object({
     classId: z.string().min(1, 'Class ID is required')
@@ -86,7 +87,7 @@ export const getAttendanceQuerySchema = z.object({
     endDate: z.coerce.date({ message: 'Invalid end date' }).optional()
 });
 
-export const getAuditLogsQuerySchema = z.object({
+export const getAuditLogsQuerySchema = paginationQuerySchema.extend({
     userId: z.uuid().optional(),
     action: z.enum([
         'MANUAL_ATTENDANCE', 'ATTENDANCE_OVERRIDE', 'EXCUSE_APPROVED', 'EXCUSE_REJECTED',
