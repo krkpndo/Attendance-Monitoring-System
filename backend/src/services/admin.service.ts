@@ -167,32 +167,41 @@ class AdminService {
     throw new AppError('Invalid user type', 400, 'INVALID_USER_TYPE');
   }
 
-  static async getUsers(type?: UserType, search?: string) {
-    const users = await prisma.user.findMany({
-        where: {
-            ...(type && { type: type }),
-            ...(search && {
-                OR: [
-                    { name: { contains: search, mode: 'insensitive' } },
-                    { email: { contains: search, mode: 'insensitive' } },
-                    { username: { contains: search, mode: 'insensitive' } },
-                ],
-            }),
-        },
+  static async getUsers(filters?: { type?: UserType, search?: string } & Partial<PaginationParams>) {
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+
+    const where = {
+      ...(filters?.type && { type: filters.type }),
+      ...(filters?.search && {
+        OR: [
+          { name: { contains: filters.search, mode: 'insensitive' as const } },
+          { email: { contains: filters?.search, mode: 'insensitive' as const } },
+          { username: { contains: filters.search, mode: 'insensitive' as const } }
+        ],
+      }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.user.findMany({
+        where,
         select: {
-            id: true,
-            username: true,
-            email: true,
-            name: true,
-            type: true,
-            status: true,
-            profileImage: true,
-            createdAt: true,
+          id: true,
+          username: true,
+          email: true,
+          name: true,
+          type: true,
+          status: true,
+          profileImage: true,
+          createdAt: true
         },
         orderBy: { name: 'asc' },
-    });
+        ...getPaginationArgs({ page, limit }),
+      }),
+      prisma.user.count({ where }),
+    ]);
 
-    return users;
+    return { items, pagination: buildPaginationMeta({ page, limit },total) };
 }
 
   static async getUserDetail(userId: string) {
@@ -448,31 +457,40 @@ class AdminService {
 
   // Student Management
   static async getStudents(filters?: StudentSearchFilter) {
-    const students = await prisma.student.findMany({
-      where: {
-        ...(filters?.program && { program: filters.program }),
-        ...(filters?.yearLevel && { yearLevel: filters.yearLevel }),
-        ...(filters?.section && { section: filters.section }),
-        ...(filters?.verificationStatus && { rfidCards: filters.verificationStatus === 'RFID_VERIFIED'
-          ? { some: { status: 'ACTIVE' } }
-          : { none: { status: 'ACTIVE' } },
-        }),
-        ...(filters?.search && {
-          OR: [
-            { studentNumber: { contains: filters.search, mode: 'insensitive' } },
-            { user: { name: { contains: filters.search, mode: 'insensitive' } } },
-          ],
-        }),
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, status: true, profileImage: true },
-        },
-      },
-      orderBy: { user: { name: 'asc' } },
-    });
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
 
-    return students;
+    const where = {
+      ...(filters?.program && { program: filters.program }),
+      ...(filters?.yearLevel && { yearLevel: filters.yearLevel }),
+      ...(filters?.section && { section: filters.section }),
+      ...(filters?.verificationStatus && { rfidCards: filters.verificationStatus === 'RFID_VERIFIED'
+        ? { some: { status: 'ACTIVE' as const } }
+        : { none: { status: 'ACTIVE' as const } },
+      }),
+      ...(filters?.search && {
+        OR: [
+          { studentNumber: { contains: filters.search, mode: 'insensitive' as const } },
+          { user: { name: { contains: filters.search, mode: 'insensitive' as const } } },
+        ],
+      }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.student.findMany({
+        where,
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, status: true, profileImage: true },
+          },
+        },
+        orderBy: { user: { name: 'asc' } },
+        ...getPaginationArgs({ page, limit }),
+      }),
+      prisma.student.count({ where })
+    ]);
+
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   static async revokeRfid(adminUserId: string ,userId: string, reason?: string) {
@@ -526,37 +544,47 @@ class AdminService {
   }
 
   // Professor Management
-  static async getProfessors(filters?: { search?: string; department?: string }) {
-    const professors = await prisma.professor.findMany({
-      where: {
-        ...(filters?.department && { department: filters.department }),
-        ...(filters?.search && {
-          OR: [
-            { employeeNumber: { contains: filters.search, mode: 'insensitive' } },
-            { user: { name: { contains: filters.search, mode: 'insensitive' } } },
-          ],
-        }),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            status: true,
-            profileImage: true
+  static async getProfessors(filters?: { search?: string; department?: string } & Partial<PaginationParams>) {
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+
+    const where = {
+      ...(filters?.department && { department: filters.department }),
+      ...(filters?.search && {
+        OR: [
+          { employeeNumber: { contains: filters.search, mode: 'insensitive' as const} },
+          { user: { name: { contains: filters.search, mode: 'insensitive' as const } } },
+        ],
+      }),
+    }
+
+    const [items, total] = await prisma.$transaction([
+
+      prisma.professor.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              status: true,
+              profileImage: true
+            },
           },
         },
-      },
-      orderBy: { user: { name: 'asc' } },
-      omit: {
-        userId: true,
-        createdAt: true,
-        updatedAt : true
-      }
-    });
-
-    return professors;
+        orderBy: { user: { name: 'asc' } },
+        omit: {
+          userId: true,
+          createdAt: true,
+          updatedAt : true
+        },
+        ...getPaginationArgs({ page, limit }),
+      }),
+      prisma.professor.count({ where }),
+    ]);
+    
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   // Course Management
@@ -713,31 +741,42 @@ class AdminService {
   }
 
   static async getClasses(filters?: GetClassesFilter) {
-    const classes = await prisma.class.findMany({
-      where: {
-        ...(filters?.courseId && { courseId: filters.courseId }),
-        ...(filters?.professorId && { professorId: filters.professorId }),
-        ...(filters?.schoolYear && { schoolYear: filters.schoolYear }),
-        ...(filters?.semester && { semester: filters.semester }),
-        ...(filters?.status && { status: filters.status }),
-      },
-      include: {
-        course: { select: { courseCode: true, courseName: true, id: true } },
-        professor: { select: { name: true, id: true } },
-        _count: {
-          select: { classEnrollments: { where: { status: 'ENROLLED' } } },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-      omit: {
-        courseId: true,
-        professorId: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
 
-    return classes;
+    const where = {
+      ...(filters?.courseId && { courseId: filters.courseId }),
+      ...(filters?.professorId && { professorId: filters.professorId }),
+      ...(filters?.schoolYear && { schoolYear: filters.schoolYear }),
+      ...(filters?.semester && { semester: filters.semester }),
+      ...(filters?.status && { status: filters.status }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.class.findMany({
+        where,
+        include: {
+          course: { select: { courseCode: true, courseName: true, id: true } },
+          professor: { select: { name: true, id: true } },
+          _count: {
+            select: { classEnrollments: { where: { status: 'ENROLLED' } } },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        omit: {
+          courseId: true,
+          professorId: true,
+          createdAt: true,
+          updatedAt: true
+        },
+        ...getPaginationArgs({ page, limit }),
+      }),
+      prisma.class.count({ where })
+    ]);
+
+
+
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   static async getClassDetail(classId: string) {
@@ -1094,67 +1133,75 @@ class AdminService {
 
   // Attendance Oversight
   static async getAttendanceRecords(filters?: GetAttendanceRecordsDto) {
-    const records = await prisma.attendanceRecord.findMany({
-      where: {
-        ...(filters?.studentId && { studentId: filters.studentId }),
-        ...(filters?.sessionId && { sessionId: filters.sessionId }),
-        ...(filters?.classId && { session: { classId: filters.classId } }),
-        ...(filters?.startDate && filters?.endDate && {
-          session: {
-            sessionDate: {
-              gte: filters.startDate,
-              lte: filters.endDate,
-            },
-          },
-        }),
-      },
-      include: {
-        student: {
-          select: { name: true, id: true },
-        },
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+
+    const where = {
+      ...(filters?.studentId && { studentId: filters.studentId }),
+      ...(filters?.sessionId && { sessionId: filters.sessionId }),
+      ...(filters?.classId && { session: { classId: filters.classId } }),
+      ...(filters?.startDate && filters?.endDate && {
         session: {
-          include: {
-            class: {
-              include: {
-                course: {
-                  select: {
-                    courseCode: true,
-                    courseName: true,
-                    id: true
+          sessionDate: {
+            gte: filters.startDate,
+            lte: filters.endDate,
+          },
+        },
+      }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.attendanceRecord.findMany({
+        where,
+        include: {
+          student: {
+            select: { name: true, id: true },
+          },
+          session: {
+            include: {
+              class: {
+                include: {
+                  course: {
+                    select: {
+                      courseCode: true,
+                      courseName: true,
+                      id: true
+                    }
+                  },
+                  professor: {
+                    select: {
+                      id: true,
+                      name: true
+                    }
                   }
                 },
-                professor: {
-                  select: {
-                    id: true,
-                    name: true
-                  }
+                omit: {
+                  courseId: true,
+                  professorId: true,
+                  createdAt: true,
+                  updatedAt: true
                 }
               },
-              omit: {
-                courseId: true,
-                professorId: true,
-                createdAt: true,
-                updatedAt: true
-              }
             },
+            omit: {
+              classId: true,
+              createdAt: true,
+              updatedAt: true
+            }
           },
-          omit: {
-            classId: true,
-            createdAt: true,
-            updatedAt: true
-          }
         },
-      },
-      orderBy: { session: { sessionDate: 'desc' } },
-      omit: {
-        sessionId: true,
-        studentId: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
-
-    return records;
+        orderBy: { session: { sessionDate: 'desc' } },
+        omit: {
+          sessionId: true,
+          studentId: true,
+          createdAt: true,
+          updatedAt: true
+        },
+        ...getPaginationArgs({ page, limit })
+      }),
+      prisma.attendanceRecord.count({ where })
+    ]);
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   static async getAttendanceReport(classId: string) {
@@ -1214,72 +1261,83 @@ class AdminService {
   }
 
   // Excuse Oversight
-  static async getAllExcuseLetters(filters?: { status?: ExcuseStatus; studentId?: string }) {
-    const excuseLetters = await prisma.excuseLetter.findMany({
-      where: {
-        ...(filters?.status && { excuseDates: { some: { status: filters.status } } }),
-        ...(filters?.studentId && { studentId: filters.studentId }),
-      },
-      include: {
-        student: {
-          select: { name: true, profileImage: true, id: true },
-        },
-        excuseDates: {
-          include: {
-            reviewedByUser: { select: { name: true } },
-            attendanceRecord: {
-              include: {
-                session: {
-                  include: {
-                    class: {
-                      include: {
-                        course: {
-                          select: {
-                            id: true,
-                            courseCode: true,
-                            courseName: true
+  static async getAllExcuseLetters(filters?: { status?: ExcuseStatus; studentId?: string } & Partial<PaginationParams>) {
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+
+    const where = {
+      ...(filters?.status && { excuseDates: { some: { status: filters.status } } }),
+      ...(filters?.studentId && { studentId: filters.studentId }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.excuseLetter.findMany({
+        where,
+        include: {
+          student: {
+            select: { name: true, profileImage: true, id: true },
+          },
+          excuseDates: {
+            include: {
+              reviewedByUser: { select: { name: true } },
+              attendanceRecord: {
+                include: {
+                  session: {
+                    include: {
+                      class: {
+                        include: {
+                          course: {
+                            select: {
+                              id: true,
+                              courseCode: true,
+                              courseName: true
+                            }
                           }
+                        },
+                        omit: {
+                          courseId: true,
+                          professorId: true,
+                          createdAt: true,
+                          updatedAt: true
                         }
                       },
-                      omit: {
-                        courseId: true,
-                        professorId: true,
-                        createdAt: true,
-                        updatedAt: true
-                      }
                     },
+                    omit: {
+                      classId: true,
+                      createdAt: true,
+                      updatedAt: true
+                    }
                   },
-                  omit: {
-                    classId: true,
-                    createdAt: true,
-                    updatedAt: true
-                  }
                 },
+                omit: {
+                  sessionId: true,
+                  studentId: true,
+                  createdAt: true,
+                  updatedAt: true
+                }
               },
-              omit: {
-                sessionId: true,
-                studentId: true,
-                createdAt: true,
-                updatedAt: true
-              }
             },
+            omit: {
+              excuseId: true,
+              attendanceId: true
+            }
           },
-          omit: {
-            excuseId: true,
-            attendanceId: true
-          }
+          attachments: true,
         },
-        attachments: true,
-      },
-      orderBy: { submittedAt: 'desc' },
-      omit: {
-        studentId: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    });
+        orderBy: { submittedAt: 'desc' },
+        omit: {
+          studentId: true,
+          createdAt: true,
+          updatedAt: true
+        },
+        ...getPaginationArgs({ page, limit }),
+      }),
+      prisma.excuseLetter.count({ where })
+    ]);
 
-    return excuseLetters;
+
+
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   static async reviewExcuseLetter(
@@ -1386,23 +1444,34 @@ class AdminService {
     return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
-  static async getRfidRequests(filters?: { status?: RfidRequestStatus }) {
-    return prisma.rfidRequest.findMany({
-      where: { ...(filters?.status && { status: filters.status }) },
-      orderBy: { createdAt: 'asc' },
-      include: {
-        student: {
-          select: {
-            studentNumber: true,
-            user: {
-              select: {
-                name: true, email: true
+  static async getRfidRequests(filters?: { status?: RfidRequestStatus } & Partial<PaginationParams>) {
+    const page = filters?.page ?? 1;
+    const limit = filters?.limit ?? 20;
+
+    const where = { ...(filters?.status && { status: filters.status }) };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.rfidRequest.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        include: {
+          student: {
+            select: {
+              studentNumber: true,
+              user: {
+                select: {
+                  name: true, email: true
+                }
               }
             }
           }
-        }
-      }
-    });
+        },
+        ...getPaginationArgs({ page, limit }),
+      }),
+      prisma.rfidRequest.count({ where })
+    ]);
+    
+    return { items, pagination: buildPaginationMeta({ page, limit }, total) };
   }
 
   static async rejectRfidRequest(adminUserId: string, requestId: string, reason: string) {

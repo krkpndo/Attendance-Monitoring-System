@@ -29,7 +29,11 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
       const type = req.query.type as UserType | undefined;
       const search = req.query.search as string | undefined;
 
-      const result = await AdminService.getUsers(type, search);
+      const result = await AdminService.getUsers({
+        type,
+        search,
+        page: Number(req.query.page),
+        limit: Number(req.query.limit)});
 
       return res.status(200).json({
           success: true,
@@ -140,6 +144,8 @@ export const getStudents = async (req: Request, res: Response, next: NextFunctio
       yearLevel: yearLevel ? parseInt(yearLevel as string) : undefined,
       section: section as string | undefined,
       verificationStatus: verificationStatus as VerificationStatus | undefined,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
     });
 
     return res.status(200).json({
@@ -177,6 +183,8 @@ export const getProfessors = async (req: Request, res: Response, next: NextFunct
     const result = await AdminService.getProfessors({
       search: search as string | undefined,
       department: department as string | undefined,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
     });
 
     return res.status(200).json({
@@ -280,6 +288,8 @@ export const getClasses = async (req: Request, res: Response, next: NextFunction
       schoolYear: schoolYear as string | undefined,
       semester: semester as Semester | undefined,
       status: status as ClassStatus | undefined,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
     });
 
     return res.status(200).json({
@@ -411,6 +421,8 @@ export const getAttendanceRecords = async (req: Request, res: Response, next: Ne
       studentId: studentId as string | undefined,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
     });
 
     return res.status(200).json({
@@ -449,6 +461,8 @@ export const getExcuseLetters = async (req: Request, res: Response, next: NextFu
     const result = await AdminService.getAllExcuseLetters({
       status: status as ExcuseStatus | undefined,
       studentId: studentId as string | undefined,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
     });
 
     return res.status(200).json({
@@ -540,7 +554,11 @@ export const getRfidRequests = async (req: Request, res: Response, next: NextFun
   try {
     const status = req.query.status as RfidRequestStatus | undefined;
 
-    const result = await AdminService.getRfidRequests({ status });
+    const result = await AdminService.getRfidRequests({
+      status,
+      page: Number(req.query.page),
+      limit: Number(req.query.limit)
+    })
 
     return res.status(200).json({
       success: true,

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema, updateProfessorSchema, updateStudentSchema, updateUserSchema } from '../validators/admin.validators';
+import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getProfessorsQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema, updateProfessorSchema, updateStudentSchema, updateUserSchema } from '../validators/admin.validators';
 import { paginationQuerySchema, reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
@@ -22,7 +22,7 @@ router.patch('/users/professors/:userId', validate(updateProfessorSchema), Admin
 router.get('/students', validate(getStudentsQuerySchema, 'query'), AdminController.getStudents);
 
 // Professor Management
-router.get('/professors', AdminController.getProfessors);
+router.get('/professors', validate(getProfessorsQuerySchema, 'query'), AdminController.getProfessors);
 
 // Course Management
 router.post('/courses/create', validate(createCourseSchema) ,AdminController.createCourse);

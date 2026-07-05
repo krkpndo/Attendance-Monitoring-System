@@ -219,7 +219,13 @@ export const getExcuseLetters = async (req: Request, res: Response, next: NextFu
   try {
     const classId = req.query.classId as string | undefined;
 
-    const result = await ProfessorService.getExcuseLetters(req.user!.userId, classId);
+    const result = await ProfessorService.getExcuseLetters(
+      req.user!.userId, {
+        classId,
+        page: Number(req.query.page),
+        limit: Number(req.query.limit)
+      }
+    );
 
     return res.status(200).json({
         success: true,

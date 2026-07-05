@@ -1,4 +1,5 @@
 import { ExcuseType } from "@prisma/client";
+import { PaginationParams } from "../utils/pagination";
 
 
 export interface StudentProfileDto {
@@ -21,7 +22,7 @@ export interface SubmitExcuseLetterDto {
     attendanceRecordIds: string[]
 }
 
-export interface StudentAttendanceDto {
+export interface StudentAttendanceDto extends Partial<PaginationParams> {
     userId: string;
     classId?: string;
     startDate?: Date;

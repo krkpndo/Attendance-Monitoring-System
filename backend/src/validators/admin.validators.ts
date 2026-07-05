@@ -9,14 +9,14 @@ export const courseIdParamSchema = z.object({
     courseId: z.string().min(1, 'Course ID is required')
 });
 
-export const getUsersQuerySchema = z.object({
+export const getUsersQuerySchema = paginationQuerySchema.extend({
     type: z.enum(['STUDENT', 'PROFESSOR', 'ADMIN'], {
         message: 'Type must be STUDENT, PROFESSOR, or ADMIN'
     }).optional(),
     search: z.string().max(100).optional()
 });
 
-export const getStudentsQuerySchema = z.object({
+export const getStudentsQuerySchema = paginationQuerySchema.extend({
     search: z.string().optional(),
     program: z.string().optional(),
     yearLevel: z.string().transform(val => parseInt(val)).pipe(z.number().int().min(1).max(6)).optional(),
@@ -50,7 +50,7 @@ export const createClassSchema = z.object({
     room: z.string().max(50).optional()
 });
 
-export const getClassesQuerySchema = z.object({
+export const getClassesQuerySchema = paginationQuerySchema.extend({
     courseId: z.uuid().optional(),
     professorId: z.uuid().optional(),
     schoolYear: z.string().optional(),
@@ -79,7 +79,7 @@ export const setClassScheduleSchema = z.object({
     ).min(1, 'At least one schedule is required')
 });
 
-export const getAttendanceQuerySchema = z.object({
+export const getAttendanceQuerySchema = paginationQuerySchema.extend({
     classId: z.string().optional(),
     sessionId: z.string().optional(),
     studentId: z.string().optional(),
@@ -99,7 +99,7 @@ export const getAuditLogsQuerySchema = paginationQuerySchema.extend({
     endDate: z.coerce.date({ message: 'Invalid end date' }).optional()
 });
 
-export const getExcuseLettersQuerySchema = z.object({
+export const getExcuseLettersQuerySchema = paginationQuerySchema.extend({
     status: z.enum(['PENDING', 'APPROVED', 'REJECTED'], {
         message: 'Status must be PENDING, APPROVED, or REJECTED'
     }).optional(),
@@ -152,7 +152,7 @@ export const enrollStudentSchema = z.object({
     studentId: z.uuid('Invalid student ID')
 });
 
-export const getRfidRequestsQuerySchema = z.object({
+export const getRfidRequestsQuerySchema = paginationQuerySchema.extend({
     status: z.enum(['PENDING', 'FULFILLED', 'REJECTED'], {
         message: 'Status must be PENDING, FULFILLED, or REJECTED'
     }).optional()
@@ -172,4 +172,9 @@ export const deviceIdParamSchema = z.object({
 
 export const revokeDeviceSchema = z.object({
     reason: z.string().max(255).optional()
+});
+
+export const getProfessorsQuerySchema = paginationQuerySchema.extend({
+    search: z.string().max(100).optional(),
+    department: z.string().max(100).optional()
 });
