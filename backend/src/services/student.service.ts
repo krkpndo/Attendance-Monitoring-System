@@ -68,7 +68,7 @@ class StudentService {
         }
 
         return prisma.$transaction(async (tx) => {
-            await tx.$executeRaw`SELECT pg_advisory_xact_lock(3, hashText(${student.id}))`;
+            await tx.$executeRaw`SELECT pg_advisory_xact_lock(3, hashtext(${student.id}))`;
 
             const activeCard = await tx.rfidCard.findFirst({
                 where: { studentId: student.id, status: 'ACTIVE' }
@@ -400,19 +400,31 @@ class StudentService {
             where: {
                 id: { in: data.attendanceRecordIds },
                 studentId
-            }
+            },
+            include: { session: { select: { status: true } } }
         });
-    
+
         if (attendanceRecords.length !== data.attendanceRecordIds.length) {
             throw new AppError('One or more attendance records are invalid or do not belong to this student', 400, 'BAD_REQUEST');
         }
-    
+
         const invalidRecords = attendanceRecords.filter(
             r => r.status !== 'ABSENT' && r.status !== 'LATE'
         );
-    
+
         if (invalidRecords.length > 0) {
             throw new AppError('Excuse letters can only be submitted for ABSENT or LATE records', 400, 'INVALID_ATTENDANCE_STATUS');
+        }
+
+        // Excuses are after-the-fact: while a session is OPEN every record
+        // starts ABSENT, so allowing submission here would let a student
+        // excuse a session they end up attending.
+        const openSessionRecords = attendanceRecords.filter(
+            r => r.session.status !== 'CLOSED'
+        );
+
+        if (openSessionRecords.length > 0) {
+            throw new AppError('Excuse letters can only be submitted after the session has closed', 400, 'SESSION_NOT_CLOSED');
         }
     
         const excuseLetter = await prisma.$transaction(async (tx) => {

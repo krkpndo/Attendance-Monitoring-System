@@ -6,7 +6,6 @@ import { AuditAction, ExcuseStatus, Prisma, RfidRequestStatus, UserType } from '
 import AuditService from './audit.service';
 import NotificationService from './notification.service';
 import { generateDeviceToken, hashToken } from '../utils/token_utils';
-import { create } from 'node:domain';
 import { buildPaginationMeta, getPaginationArgs, PaginatedResult, PaginationParams } from '../utils/pagination';
 
 class AdminService {
@@ -77,10 +76,10 @@ class AdminService {
           newValue: { type: created.type, username: created.username }
         }, tx);
   
-        return create;
-        });
+        return created;
+      });
 
-        return user;
+      return user;
     }
 
     if (data.type === 'PROFESSOR') {
@@ -100,7 +99,7 @@ class AdminService {
 
       const user = await prisma.$transaction(async (tx) => {
 
-        const created = await prisma.user.create({
+        const created = await tx.user.create({
           data: {
             username: data.username,
             password: hashedPassword,
@@ -909,8 +908,12 @@ class AdminService {
         data: schedules.map((s) => ({
           classId,
           dayOfWeek: s.dayOfWeek,
-          startTime: new Date(`1970-01-01T${s.startTime}`),
-          endTime: new Date(`1970-01-01T${s.endTime}`)
+          // Anchor to UTC ("Z") so the literal wall-clock time is stored in
+          // the @db.Time column. Without it the string parses in the
+          // server's local timezone and the stored time shifts by its UTC
+          // offset. Consumers must read these with UTC getters.
+          startTime: new Date(`1970-01-01T${s.startTime}Z`),
+          endTime: new Date(`1970-01-01T${s.endTime}Z`)
         }))
       });
 
@@ -931,6 +934,28 @@ class AdminService {
     });
 
     return newSchedules;
+  }
+
+  // Session-open creates records for then-enrolled students only; a student
+  // enrolled while a session is OPEN would otherwise have no record and the
+  // tap engine would report "not enrolled" for that session. skipDuplicates
+  // covers re-enrollments whose record survived the drop (e.g. PRESENT).
+  private static async backfillOpenSessionRecord(
+    tx: Prisma.TransactionClient,
+    classId: string,
+    studentId: string
+  ) {
+    const openSession = await tx.attendanceSession.findFirst({
+      where: { classId, status: 'OPEN' },
+      select: { id: true }
+    });
+
+    if (openSession) {
+      await tx.attendanceRecord.createMany({
+        data: [{ sessionId: openSession.id, studentId, status: 'ABSENT' as const }],
+        skipDuplicates: true
+      });
+    }
   }
 
   // Enrollment Management
@@ -962,6 +987,10 @@ class AdminService {
       }
 
       const reEnrolled = await prisma.$transaction(async (tx) => {
+        // Same class lock as openAttendanceSession: an enrollment must not
+        // interleave with a session opening, or the student could miss both
+        // the open-time record snapshot and the backfill below.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(1, hashtext(${classId}))`;
 
         const updated = await tx.classEnrollment.update({
           where: { id: existingEnrollment.id },
@@ -992,6 +1021,8 @@ class AdminService {
           newValue: { status: 'ENROLLED' }
         }, tx);
 
+        await AdminService.backfillOpenSessionRecord(tx, classId, studentId);
+
         return updated;
       });
 
@@ -1007,7 +1038,9 @@ class AdminService {
     }
 
     const enrollment = await prisma.$transaction(async (tx) => {
-      
+      // See the re-enrollment branch: serialize with session opening.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(1, hashtext(${classId}))`;
+
       const created = await tx.classEnrollment.create({
         data: { classId, studentId },
         include: {
@@ -1030,6 +1063,8 @@ class AdminService {
         description: `Enrolled in ${classRecord.course.courseCode}`,
         newValue: { classId, studentId, status: 'ENROLLED' }
       }, tx);
+
+      await AdminService.backfillOpenSessionRecord(tx, classId, studentId);
 
       return created;
     });
@@ -1388,7 +1423,9 @@ class AdminService {
 
       if (data.status === 'APPROVED') {
         await tx.attendanceRecord.updateMany({
-          where: { id: { in: attendanceIds } },
+          // Only excusable statuses: never downgrade a record that became
+          // PRESENT after the excuse was submitted.
+          where: { id: { in: attendanceIds }, status: { in: ['ABSENT', 'LATE'] } },
           data: { status: 'EXCUSED' },
         });
       }
