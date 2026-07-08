@@ -239,6 +239,7 @@ model Class {
   attendanceSessions AttendanceSession[]
 
   @@unique([courseId, section, schoolYear, semester])
+  @@index([professorId])
   @@map("classes")
 }
 
@@ -273,6 +274,7 @@ model ClassEnrollment {
   student User  @relation(fields: [studentId], references: [id])
 
   @@unique([classId, studentId])
+  @@index([studentId])
   @@map("class_enrollments")
 }
 
@@ -299,6 +301,9 @@ model AttendanceSession {
   cancelledByUser   User?              @relation("CancelledByUser", fields: [cancelledBy], references: [id])
   attendanceRecords AttendanceRecord[]
 
+  // Open-session lookups: per class on session open, per device on every tap
+  @@index([classId, status])
+  @@index([deviceId, status])
   @@map("attendance_sessions")
 }
 
@@ -321,6 +326,8 @@ model AttendanceRecord {
   excuseDates    ExcuseDate[]
 
   @@unique([sessionId, studentId])
+  // The unique's prefix covers sessionId lookups; student history needs its own
+  @@index([studentId])
   @@map("attendance_records")
 }
 
@@ -338,6 +345,7 @@ model ExcuseLetter {
   excuseDates    ExcuseDate[]
   attachments    ExcuseAttachment[]
 
+  @@index([studentId])
   @@map("excuse_letters")
 }
 
@@ -357,6 +365,8 @@ model ExcuseDate {
 
   @@unique([excuseId, attendanceId])
   @@index([status])
+  // Blocking-excuse check on submission queries by attendanceId
+  @@index([attendanceId])
   @@map("excuse_dates")
 }
 

@@ -273,15 +273,22 @@ class ProfessorService {
                 }
             }
 
+            // sessionDate is a @db.Date column and Prisma keeps the UTC date
+            // part, so a raw new Date() opened before 8:00 AM on a UTC+8
+            // server would land on the previous day. Anchor the server-local
+            // calendar day at UTC midnight so the literal day is stored.
+            const now = new Date();
+            const sessionDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
             const newSession = await tx.attendanceSession.create({
                 data: {
                     classId,
                     scheduleId,
-                    sessionDate: new Date(),
+                    sessionDate,
                     startTime: schedule.startTime,
                     endTime: schedule.endTime,
                     status: 'OPEN',
-                    openedAt: new Date(),
+                    openedAt: now,
                     deviceId: deviceId ?? null
                 }
             });
