@@ -1,6 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
 import AuthService from '../services/auth.service';
-import { generateTokenPair, verifyAccessToken, verifyRefreshToken } from '../utils/token_utils';
 
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
