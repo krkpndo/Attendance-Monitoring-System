@@ -8,16 +8,7 @@ import fs from "fs";
 
 export const getStudentProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const studentId = req.user?.userId;
-
-        if (!req.user) {
-            return  res.status(403).json({
-                success: false,
-                message: 'Missing required parameter: user'
-            });
-        }
-
-        const record = await StudentService.getStudentProfile(studentId!);
+        const record = await StudentService.getStudentProfile(req.user!.userId);
 
         return res.status(200).json({
             success: true,
@@ -79,13 +70,6 @@ export const getClasses = async (req: Request, res: Response, next: NextFunction
         const studentId = req.user!.userId;
 
         const record = await StudentService.getStudentClasses(studentId);
-
-        if (record.length === 0) {
-            return res.status(200).json({
-                success: true,
-                message: 'Class record empty'
-            });
-        }
 
         return res.status(200).json({
             success: true,
@@ -280,7 +264,7 @@ export const getExcuseLetterDetail = async (req: Request, res: Response, next: N
     }
 };
 
-export const getNotifications = async (req: Request, res: Response) => {
+export const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const result = await NotificationService.getNotifications(req.user!.userId, {
             page: Number(req.query.page),
@@ -293,22 +277,11 @@ export const getNotifications = async (req: Request, res: Response) => {
             data: result
         });
     } catch (error) {
-        if (error instanceof AppError) {
-            return res.status(error.statusCode).json({
-                success: false,
-                message: error.message,
-                code: error.errorCode
-            });
-        }
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error',
-            code: 'SERVER_ERROR'
-        });
+        next(error);
     }
 };
 
-export const markNotificationsAsRead = async (req: Request, res: Response) => {
+export const markNotificationsAsRead = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { notificationId } = req.params;
 
@@ -320,18 +293,7 @@ export const markNotificationsAsRead = async (req: Request, res: Response) => {
             data: result
         });
     } catch (error) {
-        if (error instanceof AppError) {
-            return res.status(error.statusCode).json({
-                success: false,
-                message: error.message,
-                code: error.errorCode
-            });
-        }
-        return res.status(500).json({
-            success: false,
-            message: 'Internal Server Error',
-            code: 'SERVER_ERROR'
-        });
+        next(error);
     }
 };
 

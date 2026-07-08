@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import ProfessorService from '../services/professor.service';
 import NotificationService from '../services/notification.service';
-import { AppError } from '../utils/app_error';
 import { MarkAttendanceDto, ReviewExcuseLetterDto, UpdateProfileDto } from '../interfaces/professor.interface';
 import path from 'path';
 import fs from 'fs';
@@ -92,18 +91,7 @@ export const getClassSchedule = async (req: Request, res: Response, next: NextFu
     });
 
   } catch (error) {
-    if (error instanceof AppError) {
-      return res.status(error.statusCode).json({
-        success: false,
-        message: error.message, 
-        code: error.errorCode
-    });
-    }
-    return res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        code: 'SERVER_ERROR'
-    });
+    next(error);
   }
 };
 
