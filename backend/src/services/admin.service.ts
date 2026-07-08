@@ -1136,18 +1136,23 @@ class AdminService {
     const page = filters?.page ?? 1;
     const limit = filters?.limit ?? 20;
 
+    // Compose a single `session` object: spreading classId and the date
+    // range as separate `session:` keys would let the later one overwrite
+    // the earlier, silently dropping the class filter.
+    const sessionWhere = {
+      ...(filters?.classId && { classId: filters.classId }),
+      ...(filters?.startDate && filters?.endDate && {
+        sessionDate: {
+          gte: filters.startDate,
+          lte: filters.endDate,
+        },
+      }),
+    };
+
     const where = {
       ...(filters?.studentId && { studentId: filters.studentId }),
       ...(filters?.sessionId && { sessionId: filters.sessionId }),
-      ...(filters?.classId && { session: { classId: filters.classId } }),
-      ...(filters?.startDate && filters?.endDate && {
-        session: {
-          sessionDate: {
-            gte: filters.startDate,
-            lte: filters.endDate,
-          },
-        },
-      }),
+      ...(Object.keys(sessionWhere).length > 0 && { session: sessionWhere }),
     };
 
     const [items, total] = await prisma.$transaction([

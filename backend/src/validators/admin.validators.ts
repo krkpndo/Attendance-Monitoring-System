@@ -1,4 +1,5 @@
 import z from "zod";
+import { AuditAction } from "@prisma/client";
 import { paginationQuerySchema } from "./shared.validators";
 
 export const idParamSchema = z.object({
@@ -85,18 +86,21 @@ export const getAttendanceQuerySchema = paginationQuerySchema.extend({
     studentId: z.string().optional(),
     startDate: z.coerce.date({ message: 'Invalid start date' }).optional(),
     endDate: z.coerce.date({ message: 'Invalid end date' }).optional()
+}).refine((data) => (data.startDate === undefined) === (data.endDate === undefined), {
+    message: 'Start date and end date must be provided together',
+    path: ['startDate']
 });
 
 export const getAuditLogsQuerySchema = paginationQuerySchema.extend({
     userId: z.uuid().optional(),
-    action: z.enum([
-        'MANUAL_ATTENDANCE', 'ATTENDANCE_OVERRIDE', 'EXCUSE_APPROVED', 'EXCUSE_REJECTED',
-        'SESSION_OPENED', 'SESSION_CLOSED', 'SESSION_CANCELLED', 'ENROLLMENT_ADDED',
-        'ENROLLMENT_DROPPED', 'RFID_REVOKED', 'RFID_REQUEST_REJECTED', 'USER_STATUS_CHANGED',
-        'USER_CREATED', 'DEVICE_REGISTERED', 'DEVICE_REVOKED', 'DEVICE_CLAIMED'
-    ], { message: 'Invalid audit action' }).optional(),
+    // The generated enum object keeps this in sync with schema.prisma; a
+    // hand-written list here drifted the moment USER_UPDATED was added.
+    action: z.enum(AuditAction, { message: 'Invalid audit action' }).optional(),
     startDate: z.coerce.date({ message: 'Invalid start date' }).optional(),
     endDate: z.coerce.date({ message: 'Invalid end date' }).optional()
+}).refine((data) => (data.startDate === undefined) === (data.endDate === undefined), {
+    message: 'Start date and end date must be provided together',
+    path: ['startDate']
 });
 
 export const getExcuseLettersQuerySchema = paginationQuerySchema.extend({
