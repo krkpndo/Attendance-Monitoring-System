@@ -226,7 +226,9 @@ class AuthService {
         await prisma.$transaction([
             prisma.user.update({
                 where: { id: reset.userId },
-                data: { password: hashedPassword }
+                // The user chose this password themselves, which satisfies the
+                // same intent as the forced first-login change.
+                data: { password: hashedPassword, mustChangePassword: false }
             }),
             prisma.passwordReset.update({
                 where: { id: reset.id },

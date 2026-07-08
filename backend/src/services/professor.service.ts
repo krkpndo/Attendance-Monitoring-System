@@ -255,7 +255,7 @@ class ProfessorService {
                 await tx.$executeRaw`SELECT pg_advisory_xact_lock(2, hashtext(${deviceId}))`;
             }
 
-            const existingSession = await prisma.attendanceSession.findFirst({
+            const existingSession = await tx.attendanceSession.findFirst({
                 where: { classId, status: 'OPEN' }
             });
     

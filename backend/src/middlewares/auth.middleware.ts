@@ -1,10 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import dotenv from 'dotenv';
 import { hashToken, verifyAccessToken } from '../utils/token_utils';
 import { UserType } from '@prisma/client';
 import prisma from '../config/prisma';
-
-dotenv.config();
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
