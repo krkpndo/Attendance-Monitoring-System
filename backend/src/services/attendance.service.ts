@@ -67,7 +67,7 @@ class AttendanceEngine {
             };
         }
 
-        const thresholdMinutes = Number(env.ATTENDANCE_LATE_THRESHOLD_MINUTES ?? 15);
+        const thresholdMinutes = env.ATTENDANCE_LATE_THRESHOLD_MINUTES;
 
         const reference = session.openedAt ?? new Date();
 

@@ -62,10 +62,10 @@ export const handleMulterError = (err: any, req: Request, res: Response, next: N
         switch (err.code) {
 
             case 'LIMIT_FILE_COUNT':
-                return next(new AppError('Only one file is allowed for profile image', 400, 'TOO_MANY_FILES'));
+                return next(new AppError('Too many files uploaded. Profile uploads allow 1 file; excuse attachments allow up to 3', 400, 'TOO_MANY_FILES'));
 
             case 'LIMIT_FILE_SIZE':
-                return next(new AppError('Too many files uploaded', 400, 'TOO_MAY_FILES'));
+                return next(new AppError('File exceeds the maximum allowed size', 400, 'FILE_TOO_LARGE'));
 
             case 'LIMIT_UNEXPECTED_FILE':
                 return next(new AppError(`Unexpected field name: "${err.field}". Use "profileImage" for profile uploads or "files" for attachments`, 400, 'UNEXPECTED_FIELD'));

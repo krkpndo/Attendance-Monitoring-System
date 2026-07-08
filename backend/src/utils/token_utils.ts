@@ -8,7 +8,7 @@ export const generateAccessToken = (userId: string, role: UserType): string => {
     const data: TokenPayload = { userId, type: 'access', role };
 
     const options =  {
-        expiresIn: (env.ACCESS_TOKEN_EXPIRY || '1d') as jwt.SignOptions['expiresIn']
+        expiresIn: env.ACCESS_TOKEN_EXPIRY as jwt.SignOptions['expiresIn']
     };
 
     return jwt.sign(
@@ -22,7 +22,7 @@ export const generateRefreshToken = (userId: string, role: UserType): string => 
     const data: TokenPayload = { userId, type: 'refresh', role, jti: crypto.randomUUID()  };
 
     const options =  {
-        expiresIn: (env.REFRESH_TOKEN_EXPIRY || '7d') as jwt.SignOptions['expiresIn']
+        expiresIn: env.REFRESH_TOKEN_EXPIRY as jwt.SignOptions['expiresIn']
     };
 
     return jwt.sign(

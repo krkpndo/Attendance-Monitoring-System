@@ -9,8 +9,11 @@ const envSchema = z.object({
     DATABASE_URL: z.string().min(1),
     ACCESS_TOKEN_SECRET: z.string().min(1),
     REFRESH_TOKEN_SECRET: z.string().min(1),
-    ACCESS_TOKEN_EXPIRY: z.string().default('1d'),
-    REFRESH_TOKEN_EXPIRY: z.string().default('7d'),
+    // Access tokens are checked statelessly (no per-request status lookup),
+    // so keep them short: deactivation/revocation only fully bites once the
+    // access token expires and the refresh path re-checks the account.
+    ACCESS_TOKEN_EXPIRY: z.string().min(1).default('15m'),
+    REFRESH_TOKEN_EXPIRY: z.string().min(1).default('7d'),
     PORT: z.coerce.number().int().positive().default(3000),
     RESEND_API_KEY: z.string().min(1),
     EMAIL_FROM: z.string().min(1),
