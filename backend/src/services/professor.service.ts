@@ -770,7 +770,9 @@ class ProfessorService {
 
             if (data.status === 'APPROVED') {
                 await tx.attendanceRecord.updateMany({
-                    where: { id: { in: attendanceIds } },
+                    // Only excusable statuses: never downgrade a record that
+                    // became PRESENT after the excuse was submitted.
+                    where: { id: { in: attendanceIds }, status: { in: ['ABSENT', 'LATE'] } },
                     data: { status: 'EXCUSED' }
                 });
             }

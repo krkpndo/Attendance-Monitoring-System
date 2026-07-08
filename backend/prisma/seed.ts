@@ -280,20 +280,20 @@ async function main() {
   // ============================================================
   const schedules: any[] = [];
 
-  const sched1 = await prisma.classSchedule.create({ data: { classId: class1.id, dayOfWeek: [1, 3, 5], startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00') } });
+  const sched1 = await prisma.classSchedule.create({ data: { classId: class1.id, dayOfWeek: [1, 3, 5], startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z') } });
   schedules.push(sched1);
-  const sched2 = await prisma.classSchedule.create({ data: { classId: class2.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T10:00:00'), endTime: new Date('1970-01-01T11:30:00') } });
+  const sched2 = await prisma.classSchedule.create({ data: { classId: class2.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T10:00:00Z'), endTime: new Date('1970-01-01T11:30:00Z') } });
   schedules.push(sched2);
-  await prisma.classSchedule.create({ data: { classId: class3.id, dayOfWeek: [1, 3, 5], startTime: new Date('1970-01-01T10:00:00'), endTime: new Date('1970-01-01T11:30:00') } });
-  await prisma.classSchedule.create({ data: { classId: class4.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00') } });
-  await prisma.classSchedule.create({ data: { classId: class5.id, dayOfWeek: [1, 3], startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00') } });
-  const sched6 = await prisma.classSchedule.create({ data: { classId: class6.id, dayOfWeek: [1, 3], startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00') } });
+  await prisma.classSchedule.create({ data: { classId: class3.id, dayOfWeek: [1, 3, 5], startTime: new Date('1970-01-01T10:00:00Z'), endTime: new Date('1970-01-01T11:30:00Z') } });
+  await prisma.classSchedule.create({ data: { classId: class4.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z') } });
+  await prisma.classSchedule.create({ data: { classId: class5.id, dayOfWeek: [1, 3], startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z') } });
+  const sched6 = await prisma.classSchedule.create({ data: { classId: class6.id, dayOfWeek: [1, 3], startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z') } });
   schedules.push(sched6);
-  await prisma.classSchedule.create({ data: { classId: class7.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00') } });
-  const sched8 = await prisma.classSchedule.create({ data: { classId: class8.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T10:00:00'), endTime: new Date('1970-01-01T11:30:00') } });
+  await prisma.classSchedule.create({ data: { classId: class7.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z') } });
+  const sched8 = await prisma.classSchedule.create({ data: { classId: class8.id, dayOfWeek: [2, 4], startTime: new Date('1970-01-01T10:00:00Z'), endTime: new Date('1970-01-01T11:30:00Z') } });
   schedules.push(sched8);
-  await prisma.classSchedule.create({ data: { classId: class9.id, dayOfWeek: [1, 3, 5], startTime: new Date('1970-01-01T15:00:00'), endTime: new Date('1970-01-01T16:30:00') } });
-  await prisma.classSchedule.create({ data: { classId: class10.id, dayOfWeek: [5], startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T12:00:00') } });
+  await prisma.classSchedule.create({ data: { classId: class9.id, dayOfWeek: [1, 3, 5], startTime: new Date('1970-01-01T15:00:00Z'), endTime: new Date('1970-01-01T16:30:00Z') } });
+  await prisma.classSchedule.create({ data: { classId: class10.id, dayOfWeek: [5], startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T12:00:00Z') } });
 
   console.log('📅 Created class schedules');
 
@@ -349,7 +349,7 @@ async function main() {
   const session1 = await prisma.attendanceSession.create({
     data: {
       classId: class1.id, scheduleId: sched1.id, sessionDate: new Date('2026-03-17'),
-      startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00'),
+      startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-17T08:00:00'), closedAt: new Date('2026-03-17T09:30:00'),
     },
   });
@@ -365,7 +365,7 @@ async function main() {
   const session2 = await prisma.attendanceSession.create({
     data: {
       classId: class1.id, scheduleId: sched1.id, sessionDate: new Date('2026-03-19'),
-      startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00'),
+      startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-19T08:00:00'), closedAt: new Date('2026-03-19T09:30:00'),
     },
   });
@@ -381,7 +381,7 @@ async function main() {
   const session3 = await prisma.attendanceSession.create({
     data: {
       classId: class1.id, scheduleId: sched1.id, sessionDate: new Date('2026-03-21'),
-      startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00'),
+      startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-21T08:00:00'), closedAt: new Date('2026-03-21T09:30:00'),
     },
   });
@@ -397,7 +397,7 @@ async function main() {
   const session4 = await prisma.attendanceSession.create({
     data: {
       classId: class1.id, scheduleId: sched1.id, sessionDate: new Date('2026-03-24'),
-      startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00'),
+      startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-24T08:00:00'), closedAt: new Date('2026-03-24T09:30:00'),
     },
   });
@@ -413,7 +413,7 @@ async function main() {
   await prisma.attendanceSession.create({
     data: {
       classId: class1.id, scheduleId: sched1.id, sessionDate: new Date('2026-03-26'),
-      startTime: new Date('1970-01-01T08:00:00'), endTime: new Date('1970-01-01T09:30:00'),
+      startTime: new Date('1970-01-01T08:00:00Z'), endTime: new Date('1970-01-01T09:30:00Z'),
       status: 'CANCELLED', cancelledBy: prof1.id, cancelledAt: new Date('2026-03-26T07:30:00'),
     },
   });
@@ -429,7 +429,7 @@ async function main() {
   const itSession1 = await prisma.attendanceSession.create({
     data: {
       classId: class6.id, scheduleId: sched6.id, sessionDate: new Date('2026-03-17'),
-      startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00'),
+      startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-17T13:00:00'), closedAt: new Date('2026-03-17T14:30:00'),
     },
   });
@@ -445,7 +445,7 @@ async function main() {
   const itSession2 = await prisma.attendanceSession.create({
     data: {
       classId: class6.id, scheduleId: sched6.id, sessionDate: new Date('2026-03-19'),
-      startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00'),
+      startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-19T13:00:00'), closedAt: new Date('2026-03-19T14:30:00'),
     },
   });
@@ -461,7 +461,7 @@ async function main() {
   const itSession3 = await prisma.attendanceSession.create({
     data: {
       classId: class6.id, scheduleId: sched6.id, sessionDate: new Date('2026-03-24'),
-      startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00'),
+      startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-24T13:00:00'), closedAt: new Date('2026-03-24T14:30:00'),
     },
   });
@@ -477,7 +477,7 @@ async function main() {
   const itSession4 = await prisma.attendanceSession.create({
     data: {
       classId: class6.id, scheduleId: sched6.id, sessionDate: new Date('2026-03-26'),
-      startTime: new Date('1970-01-01T13:00:00'), endTime: new Date('1970-01-01T14:30:00'),
+      startTime: new Date('1970-01-01T13:00:00Z'), endTime: new Date('1970-01-01T14:30:00Z'),
       status: 'OPEN', openedAt: new Date('2026-03-26T13:00:00'),
     },
   });
@@ -499,7 +499,7 @@ async function main() {
   const itbSession1 = await prisma.attendanceSession.create({
     data: {
       classId: class8.id, scheduleId: sched8.id, sessionDate: new Date('2026-03-18'),
-      startTime: new Date('1970-01-01T10:00:00'), endTime: new Date('1970-01-01T11:30:00'),
+      startTime: new Date('1970-01-01T10:00:00Z'), endTime: new Date('1970-01-01T11:30:00Z'),
       status: 'CLOSED', openedAt: new Date('2026-03-18T10:00:00'), closedAt: new Date('2026-03-18T11:30:00'),
     },
   });
@@ -514,7 +514,7 @@ async function main() {
   await prisma.attendanceSession.create({
     data: {
       classId: class8.id, scheduleId: sched8.id, sessionDate: new Date('2026-04-01'),
-      startTime: new Date('1970-01-01T10:00:00'), endTime: new Date('1970-01-01T11:30:00'),
+      startTime: new Date('1970-01-01T10:00:00Z'), endTime: new Date('1970-01-01T11:30:00Z'),
       status: 'SCHEDULED',
     },
   });
