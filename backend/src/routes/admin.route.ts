@@ -33,7 +33,7 @@ router.patch('/courses/:courseId/update', validate(updateCourseSchema),AdminCont
 // Class Management
 router.post('/classes/create', validate(createClassSchema), AdminController.createClass);
 router.get('/classes', validate(getClassesQuerySchema, 'query'), AdminController.getClasses);
-router.get('/classes/:classId', validate(idParamSchema), AdminController.getClassDetail);
+router.get('/classes/:classId', validate(idParamSchema, 'params'), AdminController.getClassDetail);
 router.patch('/classes/:classId/update', validate(updateClassSchema), AdminController.updateClass);
 router.put('/classes/:classId/schedule', validate(setClassScheduleSchema), AdminController.setClassSchedule);
 
