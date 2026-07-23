@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import * as AdminController from '../controllers/admin.controller';
 import { validate } from '../middlewares/validation.middleware';
-import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getProfessorsQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema, updateProfessorSchema, updateStudentSchema, updateUserSchema } from '../validators/admin.validators';
+import { courseIdParamSchema, createClassSchema, createCourseSchema, createUserSchema, deviceIdParamSchema, enrollStudentSchema, getAttendanceQuerySchema, getAuditLogsQuerySchema, getClassesQuerySchema, getExcuseLettersQuerySchema, getProfessorsQuerySchema, getRfidRequestsQuerySchema, getStudentsQuerySchema, getUsersQuerySchema, idParamSchema, registerDeviceSchema, rejectRfidRequestSchema, revokeDeviceSchema, revokeRfidSchema, setClassScheduleSchema, updateClassSchema, updateCourseSchema, updateProfessorSchema, updateStudentSchema, updateUserSchema } from '../validators/admin.validators';
 import { paginationQuerySchema, reviewExcuseLetterSchema } from '../validators/shared.validators';
 
 const router = Router();
@@ -58,7 +58,7 @@ router.get('/notifications', validate(paginationQuerySchema, 'query'), AdminCont
 router.patch('/notifications/:notificationId/read', AdminController.markNotificationAsRead);
 
 // RFID
-router.patch('/students/:userId/rfid/revoke', AdminController.revokeRfid);
+router.patch('/students/:userId/rfid/revoke', validate(revokeRfidSchema), AdminController.revokeRfid);
 router.get('/rfid/requests', validate(getRfidRequestsQuerySchema, 'query'), AdminController.getRfidRequests);
 router.patch('/rfid/requests/:requestId/reject', validate(rejectRfidRequestSchema), AdminController.rejectRfidRequest);
 

@@ -166,6 +166,10 @@ export const rejectRfidRequestSchema = z.object({
     reason: z.string().min(1, 'REJECTION reason is required').max(500)
 });
 
+export const revokeRfidSchema = z.object({
+    reason: z.string().max(255).optional()
+});
+
 export const registerDeviceSchema = z.object({
     label: z.string().min(1, 'Label is required').max(100)
 });
