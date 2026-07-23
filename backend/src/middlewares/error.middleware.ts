@@ -12,6 +12,17 @@ export const errorHandler = (err: Error, _req: Request, res: Response, _next: Ne
         });
     }
 
+    // express.json() throws this when the request body is not valid JSON.
+    // It's a client error (bad payload), not an unexpected server fault, so it
+    // must not fall through to the generic 500 below.
+    if (err instanceof SyntaxError && (err as { type?: string }).type === 'entity.parse.failed') {
+        return res.status(400).json({
+            success: false,
+            message: 'Malformed JSON in request body',
+            code: 'INVALID_JSON'
+        });
+    }
+
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
 
         switch (err.code) {
