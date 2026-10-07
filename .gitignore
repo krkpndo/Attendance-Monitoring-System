@@ -19,3 +19,6 @@ build/
 
 # Uploaded files
 /backend/uploads
+
+# Local browser automation artifacts
+.playwright-mcp/
