@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
@@ -9,12 +9,28 @@ import { fileURLToPath, URL } from 'node:url'
 // Two places need to agree: Vite (for the actual bundling) and TypeScript (so the editor/type-checker resolves it). Miss either and you get red squiggles or a build error.
 
 // https://vite.dev/config/
-export default defineConfig({
-  // react() teaches Vite to transform JSX/TSX and enables Fast Refresh. tailwindcss() wires up Tailwind.
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+export default defineConfig(({ mode }) => {
+  // DEV_* values configure the Vite process only; they are not exposed to browser code.
+  const configEnv = loadEnv(mode, process.cwd(), 'DEV_')
+  const uploadsProxyTarget = process.env.DEV_API_PROXY_TARGET
+    ?? configEnv.DEV_API_PROXY_TARGET
+    ?? 'http://localhost:3000'
+
+  return {
+    // react() teaches Vite to transform JSX/TSX and enables Fast Refresh. tailwindcss() wires up Tailwind.
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
+      }
+    },
+    server: {
+      proxy: {
+        '/uploads': {
+          target: uploadsProxyTarget,
+          changeOrigin: true,
+        }
+      }
     }
   }
 })
