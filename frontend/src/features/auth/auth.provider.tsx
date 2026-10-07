@@ -49,15 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Tokens → localStorage (for the interceptor); user → React state (for the UI).
     // Wrapping this function in useCallback with an empty dependency array [] ensures that React creates this function exactly once in memory. If we didn't do this, React would create a brand new setSession function every time AuthProvider re-renders, which could cause unnecessary re-renders in child components
     const setSession = useCallback((session: LoginResponse) => {
-         
+
         tokenStorage.setTokens(session.tokens);
         setUser(session.user);
+        // Fresh login → we now know who they are. Without this, status would stay
+        // 'unauthenticated' and ProtectedRoute would bounce a just-logged-in user.
+        setStatus('authenticated');
     }, []);
 
     const clearSession = useCallback(() => {
 
         tokenStorage.clear();
         setUser(null);
+        setStatus('unauthenticated');
     }, []);
 
     // Memoize so consumers don't re-render on every parent render. The value object
@@ -67,11 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // This is a critical performance optimization. Every component that consumes this context will re-render whenever this value object changes. By wrapping it in useMemo, we tell React: "Only create a new value object if the user, setSession, or clearSession actually change." Without this, every single child component listening to auth would re-render every time the provider re-renders, even if the auth state didn't change
     const value = useMemo<AuthContextValue>(() => ({
+        status,
         user,
         isAuthenticated: user !== null,
         setSession,
         clearSession
-    }), [user, setSession, clearSession]);
+    }), [status, user, setSession, clearSession]);
 
     // This returns the actual Provider component. It passes the optimized value object down to all of the children nested inside it.
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -7,6 +7,7 @@ export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 // This defines the "shape" of the data that will be shared across your application
 export type AuthContextValue = {
+    status: AuthStatus;       // 'loading' while rehydrating, then authenticated/unauthenticated
     user: SessionUser | null; // Holds the user data if logged in, or null if they are logged out
     isAuthenticated: boolean; // A convenient boolean flag to check if someone is logged in
     setSession: (session: LoginResponse) => void;
