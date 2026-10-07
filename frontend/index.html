@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>Attendance Monitoring System</title>
+    <!--
+      Anti-FOUC theme script. Runs BEFORE React (and before first paint), so the
+      saved theme is on <html> immediately — no white flash on load for dark-mode
+      users. If nothing is saved, we leave data-theme unset and let daisyUI's
+      `--prefersdark` follow the OS. useTheme (in React) reads/writes the same key.
+    -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (t) document.documentElement.setAttribute("data-theme", t);
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

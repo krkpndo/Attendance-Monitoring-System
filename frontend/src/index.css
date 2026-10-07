@@ -1,2 +1,370 @@
 @import "tailwindcss";
-@plugin "daisyui";
+
+/*
+ * daisyUI plugin registration.
+ * `themes: attendance --default, attendance-dark --prefersdark`
+ *   - attendance is applied by default (no data-theme needed)
+ *   - attendance-dark auto-applies when the OS is in dark mode AND we haven't
+ *     forced a theme via <html data-theme="...">. Our ThemeToggle sets that
+ *     attribute explicitly, which overrides the OS preference once the user chooses.
+ */
+@plugin "daisyui" {
+  themes: attendance --default, attendance-dark --prefersdark;
+}
+
+/*
+ * Design tokens live here, once. Components must reference the SEMANTIC names
+ * (bg-primary, text-error, border-base-300) — never raw hex — so switching
+ * themes recolors the whole app from this one place. (UI-GUIDELINES §1)
+ */
+@plugin "daisyui/theme" {
+  name: "attendance";
+  default: true;
+  color-scheme: light;
+  --color-primary: #0056FF;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #4C5FD6;
+  --color-secondary-content: #FFFFFF;
+  --color-accent: #14B8A6;
+  --color-accent-content: #FFFFFF;
+  --color-neutral: #334155;
+  --color-neutral-content: #F3F5FA;
+  --color-base-100: #FFFFFF;
+  --color-base-200: #F3F5FA;
+  --color-base-300: #E4E8F1;
+  --color-base-content: #1E2433;
+  --color-info: #38BDF8;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
+  --radius-box: 0.75rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.375rem;
+}
+
+/*
+ * Dark theme — same hue relationships, inverted base. Primary and the semantic
+ * colors are lifted (e.g. #3B7BFF vs #0056FF) because saturated royal blue loses
+ * contrast on a dark background. (UI-GUIDELINES §1)
+ */
+@plugin "daisyui/theme" {
+  name: "attendance-dark";
+  default: false;
+  color-scheme: dark;
+  --color-primary: #3B7BFF;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #7C8AF0;
+  --color-secondary-content: #0F1420;
+  --color-accent: #2DD4C4;
+  --color-accent-content: #0F1420;
+  --color-neutral: #CBD5E1;
+  --color-neutral-content: #1E2433;
+  --color-base-100: #10131C;
+  --color-base-200: #171B26;
+  --color-base-300: #232838;
+  --color-base-content: #E6E9F2;
+  --color-info: #5FC9FB;
+  --color-success: #34D372;
+  --color-warning: #F0A93B;
+  --color-error: #F0605C;
+  --radius-box: 0.75rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.375rem;
+}
+
+/*
+ * Typography. Roboto is the UI face; it's self-hosted via @fontsource (imported
+ * in main.tsx), NOT a runtime Google Fonts <link>, so there's no render-blocking
+ * external request. Tailwind's `font-sans` (and the default body font) now resolve
+ * to Roboto with a system fallback. `--font-mono` is reserved for IDs / timestamps /
+ * RFID values. (UI-GUIDELINES §1 Typography)
+ */
+@theme {
+  --font-sans: "Roboto", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+}
+
+/* Respect users who ask for less motion — kill non-essential animation globally. (§5) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Background decoration primitives (see UI-GUIDELINES "Background Decoration
+ * Design Guide"). Consumed only by the <BackgroundDecoration> component; kept
+ * here because they're a data-URI / keyframes that don't express well as Tailwind
+ * utilities. Colors come from theme tokens via the component, not from here.
+ * ------------------------------------------------------------------------- */
+
+/* Layer: subtle noise so large gradients don't band or read flat (1–3% opacity,
+   applied by the component). Self-contained SVG feTurbulence, no external asset. */
+.deco-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Barely-there ambient motion (guide: 20–40s, "barely noticeable"). The
+   reduced-motion block above disables these entirely. Transform-only, so they
+   stay cheap to composite. */
+@keyframes deco-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-22px); }
+}
+@keyframes deco-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(18px, -14px); }
+}
+@keyframes deco-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.deco-float { animation: deco-float 32s ease-in-out infinite; }
+.deco-drift { animation: deco-drift 38s ease-in-out infinite; }
+.deco-breathe { animation: deco-breathe 26s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SEMANTIC TOKEN LAYER — design system v1 (AppShell + Student Dashboard slice)
+ *
+ * The daisyUI blocks above own the ROLE colors (primary, base-*, success…) and
+ * the radii. Those are fixed by the brief and unchanged.
+ *
+ * This layer adds the four things the design system defines on top of them —
+ * elevation, a measured text hierarchy, surface roles, and motion — because
+ * "which grey is a card" and "how does a card lift" were previously decided
+ * ad hoc at each call site.
+ *
+ * Two rules make the whole thing work:
+ *   1. Surfaces are ROLES, not colors. `surface-card` is base-100 in light and
+ *      base-200 in dark — a card is LIGHTER than the page in BOTH themes, which
+ *      a literal color name could never express.
+ *   2. Elevation has a different grammar per theme. Light lifts with a
+ *      primary-tinted shadow; dark lifts with a lighter surface step plus a
+ *      brighter border, because drop shadows are nearly invisible on #10131C.
+ *
+ * Dark values are duplicated across the [data-theme] selector and the
+ * prefers-color-scheme block on purpose: the alpha values carry measured
+ * contrast ratios from the design system, so they are written literally rather
+ * than derived with color-mix() (which would drift them by a percent or two).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* --- Light (attendance) — the default --------------------------------- */
+:root {
+  /* Surfaces */
+  --surface-page: var(--color-base-200);
+  --surface-card: var(--color-base-100);
+  --surface-raised: var(--color-base-100);
+  --surface-overlay: var(--color-base-100);
+  --surface-sunken: var(--color-base-200);
+
+  /* Borders */
+  --border-subtle: var(--color-base-300);
+  --border-raised: var(--color-base-300);
+  --border-strong: rgba(30, 36, 51, 0.55);
+
+  /* Text steps. Never set words lighter than subtle — it stops passing 4.5:1. */
+  --text-strong: var(--color-base-content);
+  --text-muted: rgba(30, 36, 51, 0.74);
+  --text-subtle: rgba(30, 36, 51, 0.66);
+
+  /* Light links use primary (5.10:1 on base-200). */
+  --link: var(--color-primary);
+
+  /* Tints — status discs, nav pills. Text on a tint stays base-content. */
+  --tint-primary: rgba(0, 86, 255, 0.10);
+  --tint-success: rgba(22, 163, 74, 0.16);
+  --tint-warning: rgba(217, 119, 6, 0.16);
+  --tint-error: rgba(220, 38, 38, 0.16);
+  --tint-info: rgba(56, 189, 248, 0.20);
+
+  --scrim: rgba(30, 36, 51, 0.45);
+
+  /* Elevation — primary-tinted, so lift reads as brand rather than as soot. */
+  --elevation-1: 0 1px 2px rgba(0, 86, 255, 0.06), 0 1px 1px rgba(0, 86, 255, 0.04);
+  --elevation-2: 0 12px 28px -8px rgba(0, 86, 255, 0.22), 0 2px 5px rgba(0, 86, 255, 0.10);
+  --elevation-3: 0 20px 44px -14px rgba(0, 86, 255, 0.28), 0 4px 12px rgba(0, 86, 255, 0.10);
+
+  /* Decoration density (dashboard ≈ ⅓ of auth). Dark needs ~2× to register. */
+  --deco-blob: 0.09;
+  --deco-dots: 0.10;
+  --deco-ring: 0.14;
+  --deco-noise: 0.025;
+
+  /* Motion */
+  --duration-instant: 100ms;
+  --duration-fast: 160ms;
+  --duration-base: 240ms;
+  --duration-slow: 360ms;
+}
+
+/* --- Dark (attendance-dark), chosen explicitly via the toggle ------------ */
+[data-theme="attendance-dark"] {
+  --surface-page: var(--color-base-100);
+  --surface-card: var(--color-base-200);
+  --surface-raised: var(--color-base-300);
+  --surface-overlay: var(--color-base-300);
+  --surface-sunken: var(--color-base-100);
+
+  --border-subtle: var(--color-base-300);
+  /* base-300 IS the raised fill in dark, so the border has to come from text. */
+  --border-raised: rgba(230, 233, 242, 0.12);
+  --border-strong: rgba(230, 233, 242, 0.50);
+
+  --text-strong: var(--color-base-content);
+  --text-muted: rgba(230, 233, 242, 0.72);
+  --text-subtle: rgba(230, 233, 242, 0.58);
+
+  /* Dark primary is 4.47:1 on base-200 — just under 4.5 — so links use
+     secondary (5.53:1). Icons and fills still use primary happily at 3:1+. */
+  --link: var(--color-secondary);
+
+  --tint-primary: rgba(59, 123, 255, 0.16);
+  --tint-success: rgba(52, 211, 114, 0.16);
+  --tint-warning: rgba(240, 169, 59, 0.16);
+  --tint-error: rgba(240, 96, 92, 0.16);
+  --tint-info: rgba(95, 201, 251, 0.16);
+
+  --scrim: rgba(16, 19, 28, 0.72);
+
+  /* Dark lifts with surface + border. Only overlays get a real shadow. */
+  --elevation-1: none;
+  --elevation-2: inset 0 1px 0 rgba(230, 233, 242, 0.06);
+  --elevation-3: 0 24px 48px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(230, 233, 242, 0.08);
+
+  --deco-blob: 0.16;
+  --deco-dots: 0.14;
+  --deco-ring: 0.22;
+}
+
+/* --- Dark via the OS, when the user hasn't chosen ------------------------ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --surface-page: var(--color-base-100);
+    --surface-card: var(--color-base-200);
+    --surface-raised: var(--color-base-300);
+    --surface-overlay: var(--color-base-300);
+    --surface-sunken: var(--color-base-100);
+
+    --border-subtle: var(--color-base-300);
+    --border-raised: rgba(230, 233, 242, 0.12);
+    --border-strong: rgba(230, 233, 242, 0.50);
+
+    --text-strong: var(--color-base-content);
+    --text-muted: rgba(230, 233, 242, 0.72);
+    --text-subtle: rgba(230, 233, 242, 0.58);
+
+    --link: var(--color-secondary);
+
+    --tint-primary: rgba(59, 123, 255, 0.16);
+    --tint-success: rgba(52, 211, 114, 0.16);
+    --tint-warning: rgba(240, 169, 59, 0.16);
+    --tint-error: rgba(240, 96, 92, 0.16);
+    --tint-info: rgba(95, 201, 251, 0.16);
+
+    --scrim: rgba(16, 19, 28, 0.72);
+
+    --elevation-1: none;
+    --elevation-2: inset 0 1px 0 rgba(230, 233, 242, 0.06);
+    --elevation-3: 0 24px 48px -16px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(230, 233, 242, 0.08);
+
+    --deco-blob: 0.16;
+    --deco-dots: 0.14;
+    --deco-ring: 0.22;
+  }
+}
+
+/*
+ * Expose the theme-dependent tokens to Tailwind as utilities. `inline` makes
+ * the generated utility reference the variable rather than copying its value,
+ * which is what lets one class recolor when the theme flips.
+ *
+ * Spacing is deliberately absent: the system's space-1…space-12 scale is
+ * already Tailwind's default (space-4 = 16px = `p-4`), so re-declaring it would
+ * just create a second name for the same number.
+ */
+@theme inline {
+  --color-surface-page: var(--surface-page);
+  --color-surface-card: var(--surface-card);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-sunken: var(--surface-sunken);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-raised: var(--border-raised);
+  --color-border-strong: var(--border-strong);
+
+  --color-strong: var(--text-strong);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+  --color-link: var(--link);
+
+  --color-tint-primary: var(--tint-primary);
+  --color-tint-success: var(--tint-success);
+  --color-tint-warning: var(--tint-warning);
+  --color-tint-error: var(--tint-error);
+  --color-tint-info: var(--tint-info);
+  --color-scrim: var(--scrim);
+
+  --shadow-1: var(--elevation-1);
+  --shadow-2: var(--elevation-2);
+  --shadow-3: var(--elevation-3);
+}
+
+/* Fixed layout constants — same number in both themes, so a plain @theme. */
+@theme {
+  --spacing-top-bar: 56px;
+  --spacing-tab-bar: 64px;
+  --spacing-rail: 88px;
+  --spacing-sidebar: 264px;
+  --spacing-touch: 44px;
+  --container-content: 1040px;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* Page content enter — an 8px rise plus fade, once, on route content. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.page-enter {
+  animation: page-enter var(--duration-slow) var(--ease-enter) both;
+}
+
+/*
+ * Reduced motion: the global block near the top already clamps every animation
+ * and transition to ~0s. That covers the decoration drift, the sheet slide and
+ * the page enter. This adds the one thing a duration clamp can't fix — the
+ * skeleton's travelling highlight, which has to be removed, not sped up.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    background-image: none !important;
+  }
+}
+
+/*
+ * Focus. The design system asks for a 2px focus ring with a 2px offset on every
+ * interactive element, and for it never to be removed.
+ *
+ * :where() gives this zero specificity, so it applies everywhere by default but
+ * any component that needs a different treatment can still override it without
+ * an !important arms race. :focus-visible (not :focus) means a mouse click
+ * doesn't leave a ring behind, while keyboard and AT navigation always do.
+ *
+ * The ring is `primary` in both themes: 5.6:1 on white, and 3.8:1 or better on
+ * every dark surface — above the 3:1 floor for a non-text indicator.
+ */
+:where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  /* No border-radius here on purpose: an outline already follows the element's
+     own radius, and forcing one would square off circular controls (the theme
+     toggle, the avatar link) the moment they take focus. */
+}

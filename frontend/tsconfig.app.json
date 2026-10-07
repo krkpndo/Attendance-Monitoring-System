@@ -27,8 +27,10 @@
     "noUnusedParameters": false,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    // lets you import with @/components/Button instead of ../../../components/Button
+    // Note: no `baseUrl` — it's deprecated in TS 6 and errors the build. Since
+    // TS 5.0, `paths` resolves relative to this tsconfig's location on its own,
+    // so `./src/*` still means frontend/src/*. This keeps the @/ alias working
+    // without the deprecated option.
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -28,7 +28,7 @@ export default defineConfig([
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
           caughtErrorsIgnorePattern: '^_',
-          destructureArrayIgnorePattern: '^_'
+          destructuredArrayIgnorePattern: '^_'
         }
       ]
     }
